@@ -1,0 +1,4 @@
+- [ ] an option to switch between buffered and streamed output
+  - `stdoutBuffered` (boolean switch), `stdout` (stream) and `stdoutBuffer` (buffered)
+    - how to be able to limit scrollback though? should stdoutBuffer be a list of lines?
+    - consider using a ring buffer: https://stackoverflow.com/questions/44188717/does-qt-have-cyclic-buffer
