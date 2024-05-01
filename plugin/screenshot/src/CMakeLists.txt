@@ -18,6 +18,9 @@ qt_add_qml_module(qt_screenshot URI Qti.Screenshot VERSION 0.1)
 qt_generate_wayland_protocol_client_sources(
     qt_screenshot # PRIVATE_CODE
     FILES "${CMAKE_CURRENT_SOURCE_DIR}/../dep/wlroots/protocol/wlr-screencopy-unstable-v1.xml")
+qt_generate_wayland_protocol_client_sources(
+    qt_screenshot # PRIVATE_CODE
+    FILES "${WAYLAND_PROTOCOLS_DIR}/unstable/xdg-output/xdg-output-unstable-v1.xml")
 
 install(TARGETS qt_screenshot
     BUNDLE  DESTINATION .

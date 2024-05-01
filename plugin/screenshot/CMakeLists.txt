@@ -29,6 +29,13 @@ message(STATUS "Found QtWaylandScanner: ${qtwaylandscanner}")
 find_program(waylandscanner NAMES wayland-scanner)
 message(STATUS "Found WaylandScanner: ${waylandscanner}")
 
+execute_process(
+    COMMAND pkg-config --variable=pkgdatadir wayland-protocols
+    OUTPUT_VARIABLE WAYLAND_PROTOCOLS_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Found WaylandProtocols: ${WAYLAND_PROTOCOLS_DIR}")
+
 if(QT_KNOWN_POLICY_QTP0001)
     qt_policy(SET QTP0001 NEW)
 endif()

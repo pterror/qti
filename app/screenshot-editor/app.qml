@@ -7,7 +7,10 @@ QtiWindow {
 	property url screenshotUrl: ""
 	property url oldScreenshotUrl
 	Component.onCompleted: {
-		Screenshot.captureAllScreens((ret) => console.log('ok', ret), () => console.log('error'))
+		Screenshot.captureAllScreens(url => {
+			console.log('ok', url)
+			image.source = url
+		}, () => console.log('error'))
 		oldScreenshotUrl = screenshotUrl
 	}
 	onScreenshotUrlChanged: {
@@ -15,6 +18,8 @@ QtiWindow {
 		oldScreenshotUrl = screenshotUrl
 	}
 	Image {
+		id: image
 		source: screenshotUrl
+		anchors.fill: parent
 	}
 }

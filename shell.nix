@@ -5,6 +5,8 @@ mkShell {
     kdePackages.qtshadertools
     qt6.wrapQtAppsHook
     makeWrapper
+    pkg-config
+    wayland-protocols
     wayland-scanner
   ];
   buildInputs = [

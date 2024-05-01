@@ -6,6 +6,7 @@
 #include <private/qwayland-wayland.h>
 #include <qjsvalue.h>
 #include <qwayland-wlr-screencopy-unstable-v1.h>
+#include <qwayland-xdg-output-unstable-v1.h>
 
 class ScreenshotImageProvider : public QQuickImageProvider {
 public:
@@ -71,6 +72,18 @@ private:
   static void onWlOutputDescription(void *data, wl_output *output,
                                     const char *description);
 
+  static const zxdg_output_v1_listener XDG_OUTPUT_LISTENER;
+  static void onXdgOutputLogicalPosition(void *data,
+                                         struct zxdg_output_v1 *output,
+                                         int32_t x, int32_t y);
+  static void onXdgOutputLogicalSize(void *data, struct zxdg_output_v1 *output,
+                                     int32_t width, int32_t height);
+  static void onXdgOutputDone(void *data, struct zxdg_output_v1 *output);
+  static void onXdgOutputName(void *data, struct zxdg_output_v1 *output,
+                              const char *name);
+  static void onXdgOutputDescription(void *data, struct zxdg_output_v1 *output,
+                                     const char *description);
+
   static const zwlr_screencopy_frame_v1_listener FRAME_LISTENER;
   static void onWlScreencopyFrameBuffer(void *data,
                                         struct zwlr_screencopy_frame_v1 *frame,
@@ -100,11 +113,11 @@ private:
   void onWlRegistryGlobalRemove(uint32_t id);
 
   bool mInitialized = false;
-  bool mIsWlrScreencopySupported = false;
-  wl_display *mWlDisplay = nullptr;
-  wl_shm *mWlShm = nullptr;
-  wl_registry *mWlRegistry = nullptr;
   QMap<uint, wl_output *> mWlOutputs;
   QMap<uint, QRect> mWlOutputGeometries;
+  wl_display *mWlDisplay = nullptr;
+  QtWayland::wl_registry *mWlRegistry = nullptr;
+  QtWayland::wl_shm *mWlShm = nullptr;
+  QtWayland::zxdg_output_manager_v1 *mXdgOutputManager = nullptr;
   QtWayland::zwlr_screencopy_manager_v1 *mWlrScreencopyManager = nullptr;
 };
