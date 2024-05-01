@@ -1,6 +1,6 @@
 # https://doc.qt.io/qt-6/cmake-manual.html
 cmake_minimum_required(VERSION 3.16)
-project(Qti VERSION "0.1.0" LANGUAGES CXX)
+project(Qti VERSION "0.1.0" LANGUAGES CXX C)
 
 set(QT_MIN_VERSION "6.6.0")
 set(CMAKE_CXX_STANDARD 20)
@@ -15,6 +15,19 @@ endif()
 add_compile_options(-Wall -Wextra)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Qml)
+
+if (DEFINED ENV{QTWAYLANDSCANNER})
+    set(qtwaylandscanner $ENV{QTWAYLANDSCANNER})
+else()
+    find_program(qtwaylandscanner NAMES qtwaylandscanner)
+endif()
+if (qtwaylandscanner STREQUAL "qtwaylandscanner-NOTFOUND")
+    message(FATAL_ERROR "qtwaylandscanner not found. Set the QTWAYLANDSCANNER environment variable to specify its path explicity.")
+endif()
+message(STATUS "Found QtWaylandScanner: ${qtwaylandscanner}")
+
+find_program(waylandscanner NAMES wayland-scanner)
+message(STATUS "Found WaylandScanner: ${waylandscanner}")
 
 if(QT_KNOWN_POLICY_QTP0001)
     qt_policy(SET QTP0001 NEW)

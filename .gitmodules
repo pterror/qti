@@ -1,0 +1,6 @@
+[submodule "plugin/xdg-desktop-portal/dep/xdg-desktop-portal"]
+	path = plugin/xdg-desktop-portal/dep/xdg-desktop-portal
+	url = https://github.com/pterror/xdg-desktop-portal.git
+[submodule "plugin/screenshot/dep/wlroots"]
+	path = plugin/screenshot/dep/wlroots
+	url = https://gitlab.freedesktop.org/wlroots/wlroots.git

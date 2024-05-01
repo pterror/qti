@@ -5,6 +5,7 @@ mkShell {
     kdePackages.qtshadertools
     qt6.wrapQtAppsHook
     makeWrapper
+    wayland-scanner
   ];
   buildInputs = [
     qt6.qtbase
@@ -14,6 +15,8 @@ mkShell {
     qt6.qtwayland
     wayland
   ];
+
+  QTWAYLANDSCANNER = "${qt6.qtwayland}/libexec/qtwaylandscanner";
 
   shellHook = ''
     export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
