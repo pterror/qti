@@ -11,6 +11,8 @@ set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml_modules)
 qt_add_library(qt_screenshot SHARED
     screenshot.cpp
     screenshot.hpp
+    screenshot_wl_registry.cpp
+    screenshot_wl_registry.hpp
 )
 
 qt_add_qml_module(qt_screenshot URI Qti.Screenshot VERSION 0.1)

@@ -7,10 +7,7 @@ QtiWindow {
 	property url screenshotUrl: ""
 	property url oldScreenshotUrl
 	Component.onCompleted: {
-		Screenshot.captureAllScreens(url => {
-			console.log('ok', url)
-			image.source = url
-		}, () => console.log('error'))
+		Screenshot.captureAllScreens(url => { screenshotUrl = url })
 		oldScreenshotUrl = screenshotUrl
 	}
 	onScreenshotUrlChanged: {
@@ -19,7 +16,8 @@ QtiWindow {
 	}
 	Image {
 		id: image
-		source: screenshotUrl
 		anchors.fill: parent
+		fillMode: Image.PreserveAspectFit
+		source: screenshotUrl
 	}
 }

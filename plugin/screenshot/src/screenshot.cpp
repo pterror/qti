@@ -1,9 +1,7 @@
 #include "screenshot.hpp"
-#include "wayland-xdg-output-unstable-v1-client-protocol.h"
 
 // FIXME: this is not cross platform
 #include <cstdint>
-#include <private/qwayland-wayland.h>
 #include <qabstracteventdispatcher.h>
 #include <qtypes.h>
 #include <sys/mman.h>
@@ -35,11 +33,6 @@ public:
   QImage mImage;
 };
 
-struct WlOutputPayload {
-  Screenshot *screenshot;
-  uint32_t id = 0;
-};
-
 struct WlrScreencopyFrameMetadata {
   uint32_t format = ~0;
   int width = 0;
@@ -47,8 +40,9 @@ struct WlrScreencopyFrameMetadata {
 };
 
 struct ScreenshotFramePayload {
-  std::function<void(ShmBuffer *buffer)> onSuccess;
+  std::function<void(ShmBuffer *buffer, uint)> onSuccess;
   std::function<void()> onFailure;
+  uint id;
   wl_shm *shm;
   std::variant<WlrScreencopyFrameMetadata, ShmBuffer *> buffer;
 };
@@ -189,26 +183,8 @@ uint8_t qImageFormatScore(QImage::Format format) {
 
 Screenshot::Screenshot()
     : mWlDisplay(wl_display_connect(nullptr)),
-      mWlRegistry(new QtWayland::wl_registry(
-          wl_display_get_registry(this->mWlDisplay))) {
-  wl_registry_add_listener(this->mWlRegistry->object(),
-                           &Screenshot::REGISTRY_LISTENER, this);
-  wl_display_roundtrip(this->mWlDisplay);
-  // another roundtrip for wl_output events
-  wl_display_roundtrip(this->mWlDisplay);
-  if (this->mXdgOutputManager != nullptr) {
-    for (auto kv : this->mWlOutputs.asKeyValueRange()) {
-      auto id = kv.first;
-      auto *output = kv.second;
-      auto *xdgOutput = zxdg_output_manager_v1_get_xdg_output(
-          this->mXdgOutputManager->object(), output);
-      auto *data = new WlOutputPayload({.screenshot = this, .id = id});
-      zxdg_output_v1_add_listener(xdgOutput, &Screenshot::XDG_OUTPUT_LISTENER,
-                                  data);
-    }
-    wl_display_roundtrip(this->mWlDisplay);
-  }
-}
+      mWlRegistry(new ScreenshotWlRegistry(
+          this->mWlDisplay, wl_display_get_registry(this->mWlDisplay))) {}
 
 Screenshot::~Screenshot() { wl_display_disconnect(this->mWlDisplay); }
 
@@ -224,10 +200,10 @@ ScreenshotImageProvider *Screenshot::screenshotImageProvider() const {
   }
 }
 
-// TODO: change API to accept callback
-void Screenshot::captureAllScreens(QJSValue onSuccess, QJSValue onFailure,
+void Screenshot::captureAllScreens(const QJSValue &onSuccess,
+                                   const QJSValue &onFailure,
                                    bool captureCursor) const {
-  if (this->mWlrScreencopyManager == nullptr) {
+  if (this->mWlRegistry->wlrScreencopyManager() == nullptr) {
     const auto screens = QGuiApplication::screens();
     auto pixmap = QPixmap();
     if (screens.size() == 1) {
@@ -256,7 +232,7 @@ void Screenshot::captureAllScreens(QJSValue onSuccess, QJSValue onFailure,
     // TODO: optimize when there is only one output
     auto failed = false;
     auto bounds = initialBounds();
-    for (const auto geometry : this->mWlOutputGeometries) {
+    for (const auto geometry : this->mWlRegistry->outputGeometries()) {
       bounds.setLeft(std::min(bounds.left(), geometry.left()));
       bounds.setRight(std::max(bounds.right(), geometry.right()));
       bounds.setTop(std::min(bounds.top(), geometry.top()));
@@ -264,15 +240,16 @@ void Screenshot::captureAllScreens(QJSValue onSuccess, QJSValue onFailure,
     }
     auto pixmap = QPixmap(bounds.width(), bounds.height());
     auto painter = QPainter(&pixmap);
-    auto *screencopyManager = this->mWlrScreencopyManager;
-    auto outputsLeft = this->mWlOutputs.size();
-    for (auto kv : this->mWlOutputs.asKeyValueRange()) {
+    auto *screencopyManager = this->mWlRegistry->wlrScreencopyManager();
+    auto outputsLeft = this->mWlRegistry->outputs().size();
+    for (auto kv : this->mWlRegistry->outputs().asKeyValueRange()) {
       auto id = kv.first;
       auto *output = kv.second;
       auto *frame =
           screencopyManager->capture_output(captureCursor ? 1 : 0, output);
-      const auto onFrameSuccess = [&, this](ShmBuffer *buffer) {
-        painter.drawImage(this->mWlOutputGeometries[id], buffer->mImage);
+      const auto onFrameSuccess = [&, this](ShmBuffer *buffer, uint id) {
+        painter.drawImage(this->mWlRegistry->outputGeometries()[id],
+                          buffer->mImage);
         delete buffer;
         outputsLeft -= 1;
         if (outputsLeft == 0) {
@@ -293,11 +270,14 @@ void Screenshot::captureAllScreens(QJSValue onSuccess, QJSValue onFailure,
       auto *payload =
           new ScreenshotFramePayload({.onSuccess = onFrameSuccess,
                                       .onFailure = onFrameFailure,
-                                      .shm = this->mWlShm->object(),
+                                      .id = id,
+                                      .shm = this->mWlRegistry->shm()->object(),
                                       .buffer = WlrScreencopyFrameMetadata()});
       zwlr_screencopy_frame_v1_add_listener(frame, &Screenshot::FRAME_LISTENER,
                                             payload);
     }
+    wl_display_roundtrip(this->mWlDisplay);
+    wl_display_roundtrip(this->mWlDisplay);
     wl_display_roundtrip(this->mWlDisplay);
   }
 }
@@ -344,135 +324,6 @@ void ScreenshotImageProvider::free(const QUrl &url) {
   this->mCache.remove(uuid);
 }
 
-const struct wl_registry_listener Screenshot::REGISTRY_LISTENER = {
-    .global = Screenshot::onWlRegistryGlobal,
-    .global_remove = Screenshot::onWlRegistryGlobalRemove};
-
-void Screenshot::onWlRegistryGlobal(void *data, wl_registry *registry,
-                                    uint32_t id, const char *interface,
-                                    uint32_t version) {
-  Q_UNUSED(registry);
-  Q_UNUSED(version);
-  Screenshot::resolve(data)->onWlRegistryGlobal(id, QByteArray(interface));
-}
-
-void Screenshot::onWlRegistryGlobalRemove(void *data, wl_registry *wlRegistry,
-                                          uint32_t id) {
-  Q_UNUSED(wlRegistry);
-  Screenshot::resolve(data)->onWlRegistryGlobalRemove(id);
-}
-
-void Screenshot::onWlRegistryGlobal(uint32_t id, const QByteArray &interface) {
-  if (interface == wl_output_interface.name) {
-    auto *output = static_cast<wl_output *>(
-        wl_registry_bind(this->mWlRegistry->object(), id, &wl_output_interface,
-                         wl_output_interface.version));
-    this->mWlOutputs.insert(id, output);
-    auto *data = new WlOutputPayload({.screenshot = this, .id = id});
-    wl_output_add_listener(output, &Screenshot::OUTPUT_LISTENER, data);
-  } else if (interface == wl_shm_interface.name) {
-    this->mWlShm = new QtWayland::wl_shm(this->mWlRegistry->object(), id,
-                                         wl_shm_interface.version);
-  } else if (interface == zwlr_screencopy_manager_v1_interface.name) {
-    this->mWlrScreencopyManager = new QtWayland::zwlr_screencopy_manager_v1(
-        this->mWlRegistry->object(), id,
-        zwlr_screencopy_manager_v1_interface.version);
-  } else if (interface == zxdg_output_manager_v1_interface.name) {
-    this->mXdgOutputManager = new QtWayland::zxdg_output_manager_v1(
-        this->mWlRegistry->object(), id,
-        zxdg_output_manager_v1_interface.version);
-  }
-}
-
-void Screenshot::onWlRegistryGlobalRemove(uint32_t id) {
-  this->mWlOutputs.remove(id);
-  this->mWlOutputGeometries.remove(id);
-}
-
-const wl_output_listener Screenshot::OUTPUT_LISTENER = {
-    .geometry = Screenshot::onWlOutputGeometry,
-    .mode = Screenshot::onWlOutputMode,
-    .done = Screenshot::onWlOutputDone,
-    .scale = Screenshot::onWlOutputScale,
-    .name = Screenshot::onWlOutputName,
-    .description = Screenshot::onWlOutputDescription};
-
-inline WlOutputPayload *wlOutputPayload(void *data) {
-  return static_cast<WlOutputPayload *>(data);
-}
-
-void Screenshot::onWlOutputGeometry(void *data, wl_output * /*output*/,
-                                    int32_t x, int32_t y, int32_t /*width*/,
-                                    int32_t /*height*/, int /*subpixel*/,
-                                    const char * /*make*/,
-                                    const char * /*model*/,
-                                    int32_t /*transform*/) {
-  const auto *payload = wlOutputPayload(data);
-  payload->screenshot->mWlOutputGeometries[payload->id] = QRect(x, y, 0, 0);
-}
-
-void Screenshot::onWlOutputMode(void *data, struct wl_output * /*output*/,
-                                uint32_t flags, int32_t width, int32_t height,
-                                int32_t /*refresh*/) {
-  const auto *payload = wlOutputPayload(data);
-  if ((flags & WL_OUTPUT_MODE_CURRENT) != 0) {
-    auto *rect = &payload->screenshot->mWlOutputGeometries[payload->id];
-    rect->setWidth(width);
-    rect->setHeight(height);
-  }
-}
-void Screenshot::onWlOutputDone(void * /*data*/, wl_output * /*output*/) {}
-void Screenshot::onWlOutputScale(void * /*data*/, wl_output * /*output*/,
-                                 int32_t /*factor*/) {}
-void Screenshot::onWlOutputName(void * /*data*/, wl_output * /*output*/,
-                                const char * /* name */) {}
-void Screenshot::onWlOutputDescription(void * /*data*/, wl_output * /*output*/,
-                                       const char * /* description */) {}
-
-const zxdg_output_v1_listener Screenshot::XDG_OUTPUT_LISTENER = {
-    .logical_position = Screenshot::onXdgOutputLogicalPosition,
-    .logical_size = Screenshot::onXdgOutputLogicalSize,
-    .done = Screenshot::onXdgOutputDone,
-    .name = Screenshot::onXdgOutputName,
-    .description = Screenshot::onXdgOutputDescription,
-};
-
-using XdgOutputPayload = WlOutputPayload;
-
-inline XdgOutputPayload *xdgOutputPayload(void *data) {
-  return static_cast<XdgOutputPayload *>(data);
-}
-
-void Screenshot::onXdgOutputLogicalPosition(void *data,
-                                            struct zxdg_output_v1 * /*output*/,
-                                            int32_t x, int32_t y) {
-  const auto *payload = xdgOutputPayload(data);
-  auto *rect = &payload->screenshot->mWlOutputGeometries[payload->id];
-  rect->setX(x);
-  rect->setY(y);
-}
-
-void Screenshot::onXdgOutputLogicalSize(void *data,
-                                        struct zxdg_output_v1 * /*output*/,
-                                        int32_t width, int32_t height) {
-  const auto *payload = xdgOutputPayload(data);
-  auto *rect = &payload->screenshot->mWlOutputGeometries[payload->id];
-  rect->setWidth(width);
-  rect->setHeight(height);
-}
-
-void Screenshot::onXdgOutputDone(void *data,
-                                 struct zxdg_output_v1 * /*output*/) {
-  const auto *payload = xdgOutputPayload(data);
-  delete payload;
-}
-void Screenshot::onXdgOutputName(void * /*data*/,
-                                 struct zxdg_output_v1 * /*output*/,
-                                 const char * /*name*/) {}
-void Screenshot::onXdgOutputDescription(void * /*data*/,
-                                        struct zxdg_output_v1 * /*output*/,
-                                        const char * /*description*/) {}
-
 const zwlr_screencopy_frame_v1_listener Screenshot::FRAME_LISTENER = {
     .buffer = Screenshot::onWlScreencopyFrameBuffer,
     .flags = Screenshot::onWlScreencopyFrameFlags,
@@ -513,10 +364,10 @@ void Screenshot::onWlScreencopyFrameReady(
     uint32_t /*tvSecLo*/, uint32_t /*tvNsec*/) {
   auto *payload = wlScreencopyFramePayload(data);
   if (payload == nullptr ||
-      !std::holds_alternative<WlrScreencopyFrameMetadata>(payload->buffer)) {
+      !std::holds_alternative<ShmBuffer *>(payload->buffer)) {
     return;
   }
-  payload->onSuccess(std::get<ShmBuffer *>(payload->buffer));
+  payload->onSuccess(std::get<ShmBuffer *>(payload->buffer), payload->id);
   delete payload;
   zwlr_screencopy_frame_v1_destroy(frame);
 }
@@ -535,6 +386,7 @@ void Screenshot::onWlScreencopyFrameFailed(
 void Screenshot::onWlScreencopyFrameDamage(
     void * /*data*/, struct zwlr_screencopy_frame_v1 * /*frame*/,
     uint32_t /*x*/, uint32_t /*y*/, uint32_t /*width*/, uint32_t /*height*/) {}
+
 void Screenshot::onWlScreencopyFrameLinuxDmabuf(
     void * /*data*/, struct zwlr_screencopy_frame_v1 * /*frame*/,
     uint32_t /*format*/, uint32_t /*width*/, uint32_t /*height*/) {}
