@@ -6,10 +6,12 @@
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQuickWindow>
-#include <qguiapplication.h>
+#include <QRegularExpression>
+
+const auto NON_EMPTY_REG_EXP = QRegularExpression("([^/]+?)(?:[.]qml)?$");
 
 int main(int argc, char **argv) {
-  auto app = QGuiApplication(argc, argv);
+  const auto app = QGuiApplication(argc, argv);
 
   auto cliParser = QCommandLineParser();
   const auto pathOption =
@@ -23,10 +25,20 @@ int main(int argc, char **argv) {
   cliParser.process(app);
   cliParser.unknownOptionNames();
 
-  const auto engine = QQmlApplicationEngine(cliParser.value(pathOption));
+  const auto path = cliParser.value(pathOption);
+  auto appName = QString("qti");
+  auto match = QRegularExpressionMatch();
+  if (path.contains(NON_EMPTY_REG_EXP, &match)) {
+    appName = match.captured(1);
+  }
+  QGuiApplication::setDesktopFileName(appName);
+  QGuiApplication::setApplicationName(appName);
+  QGuiApplication::setApplicationDisplayName(appName);
+
+  const auto engine = QQmlApplicationEngine(path);
   QQuickWindow::setDefaultAlphaBuffer(true);
   if (cliParser.isSet(daemonOption)) {
-    app.setQuitOnLastWindowClosed(false);
+    QGuiApplication::setQuitOnLastWindowClosed(false);
   }
-  return app.exec();
+  return QGuiApplication::exec();
 }
