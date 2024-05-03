@@ -4,6 +4,7 @@ import "../_library"
 
 QtiWindow {
 	id: window
+	margins: 0
 	property url screenshotUrl: ""
 	property url oldScreenshotUrl
 	Component.onCompleted: {

@@ -4,6 +4,7 @@ Window {
 	color: "transparent"
 	visible: true
 	default property alias content: container.children
+	property alias margins: container.anchors.margins
 
 	Rectangle {
 		anchors.fill: parent
