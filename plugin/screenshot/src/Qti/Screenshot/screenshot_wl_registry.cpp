@@ -1,5 +1,7 @@
 #include "screenshot_wl_registry.hpp"
 
+#include "zxdg_output_manager.hpp"
+
 #include <QAbstractEventDispatcher>
 #include <QRect>
 #include <QSocketNotifier>
@@ -19,15 +21,15 @@ ScreenshotWlRegistry::ScreenshotWlRegistry(wl_display *display,
   wl_display_roundtrip(this->mDisplay);
   // another roundtrip for wl_output events
   wl_display_roundtrip(this->mDisplay);
-  if (this->mXdgOutputManager != nullptr) {
+  if (ZxdgOutputManager::instance() != nullptr) {
     for (auto kv : this->mOutputs.asKeyValueRange()) {
       auto id = kv.first;
       auto *output = kv.second;
-      auto *xdgOutput = zxdg_output_manager_v1_get_xdg_output(
-          this->mXdgOutputManager->object(), output);
+      auto *xdgOutput = ZxdgOutputManager::instance()->getXdgOutput(output);
       auto *data = new XdgOutputPayload({.registry = this, .id = id});
-      zxdg_output_v1_add_listener(
-          xdgOutput, &ScreenshotWlRegistry::XDG_OUTPUT_LISTENER, data);
+      zxdg_output_v1_add_listener(xdgOutput->object(),
+                                  &ScreenshotWlRegistry::XDG_OUTPUT_LISTENER,
+                                  data);
     }
     wl_display_roundtrip(this->mDisplay);
   }
@@ -48,14 +50,6 @@ ScreenshotWlRegistry::ScreenshotWlRegistry(wl_display *display,
 }
 
 QtWayland::wl_shm *ScreenshotWlRegistry::shm() const { return this->mShm; }
-QtWayland::zxdg_output_manager_v1 *
-ScreenshotWlRegistry::xdgOutputManager() const {
-  return this->mXdgOutputManager;
-}
-QtWayland::zwlr_screencopy_manager_v1 *
-ScreenshotWlRegistry::wlrScreencopyManager() const {
-  return this->mWlrScreencopyManager;
-}
 QMap<uint, wl_output *> ScreenshotWlRegistry::outputs() const {
   return this->mOutputs;
 }
@@ -76,12 +70,6 @@ void ScreenshotWlRegistry::registry_global(uint32_t id,
                            data);
   } else if (interface == wl_shm_interface.name) {
     this->mShm = new QtWayland::wl_shm(this->object(), id, versionInt);
-  } else if (interface == zwlr_screencopy_manager_v1_interface.name) {
-    this->mWlrScreencopyManager = new QtWayland::zwlr_screencopy_manager_v1(
-        this->object(), id, versionInt);
-  } else if (interface == zxdg_output_manager_v1_interface.name) {
-    this->mXdgOutputManager =
-        new QtWayland::zxdg_output_manager_v1(this->object(), id, versionInt);
   }
 }
 

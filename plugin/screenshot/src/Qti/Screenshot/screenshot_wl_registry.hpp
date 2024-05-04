@@ -13,9 +13,6 @@ public:
                                 struct ::wl_registry *object);
 
   [[nodiscard]] QtWayland::wl_shm *shm() const;
-  [[nodiscard]] QtWayland::zxdg_output_manager_v1 *xdgOutputManager() const;
-  [[nodiscard]] QtWayland::zwlr_screencopy_manager_v1 *
-  wlrScreencopyManager() const;
   [[nodiscard]] QMap<uint, wl_output *> outputs() const;
   [[nodiscard]] QMap<uint, QRect> outputGeometries() const;
 
@@ -52,8 +49,6 @@ private:
 
   wl_display *mDisplay = nullptr;
   QtWayland::wl_shm *mShm = nullptr;
-  QtWayland::zxdg_output_manager_v1 *mXdgOutputManager = nullptr;
-  QtWayland::zwlr_screencopy_manager_v1 *mWlrScreencopyManager = nullptr;
   QMap<uint, wl_output *> mOutputs;
   QMap<uint, QRect> mOutputGeometries;
 };

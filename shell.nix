@@ -6,7 +6,6 @@ mkShell {
     makeWrapper
     # for wayland
     pkg-config
-    wayland-protocols
     wayland-scanner
     # dev utility for compiling shaers
     kdePackages.qtshadertools

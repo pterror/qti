@@ -1,5 +1,7 @@
 #include "screenshot.hpp"
 
+#include "zwlr_screencopy_manager.hpp"
+
 // FIXME: this is not cross platform
 #include <cstdint>
 #include <private/wayland-wayland-client-protocol.h>
@@ -205,7 +207,7 @@ ScreenshotImageProvider *Screenshot::screenshotImageProvider() const {
 void Screenshot::captureAllScreens(const QJSValue &onSuccess,
                                    const QJSValue &onFailure,
                                    bool captureCursor) const {
-  if (this->mWlRegistry->wlrScreencopyManager() == nullptr) {
+  if (ZwlrScreencopyManager::instance() == nullptr) {
     const auto screens = QGuiApplication::screens();
     auto pixmap = QPixmap();
     if (screens.size() == 1) {
@@ -242,7 +244,7 @@ void Screenshot::captureAllScreens(const QJSValue &onSuccess,
     }
     auto pixmap = QPixmap(bounds.width(), bounds.height());
     auto painter = QPainter(&pixmap);
-    auto *screencopyManager = this->mWlRegistry->wlrScreencopyManager();
+    auto *screencopyManager = ZwlrScreencopyManager::instance();
     auto outputsLeft = this->mWlRegistry->outputs().size();
     for (auto kv : this->mWlRegistry->outputs().asKeyValueRange()) {
       auto id = kv.first;
