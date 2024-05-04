@@ -6,12 +6,12 @@
 #include <private/qguiapplication_p.h>
 #include <qabstracteventdispatcher.h>
 
-namespace {
 struct WlOutputPayload {
   ScreenshotWlRegistry *registry;
   uint32_t id = 0;
 };
-}; // namespace
+
+using XdgOutputPayload = WlOutputPayload;
 
 ScreenshotWlRegistry::ScreenshotWlRegistry(wl_display *display,
                                            struct ::wl_registry *object)
@@ -25,7 +25,7 @@ ScreenshotWlRegistry::ScreenshotWlRegistry(wl_display *display,
       auto *output = kv.second;
       auto *xdgOutput = zxdg_output_manager_v1_get_xdg_output(
           this->mXdgOutputManager->object(), output);
-      auto *data = new WlOutputPayload({.registry = this, .id = id});
+      auto *data = new XdgOutputPayload({.registry = this, .id = id});
       zxdg_output_v1_add_listener(
           xdgOutput, &ScreenshotWlRegistry::XDG_OUTPUT_LISTENER, data);
     }
@@ -122,6 +122,7 @@ void ScreenshotWlRegistry::onWlOutputMode(void *data,
   }
 }
 
+// `delete payload` results in double free here for some reason
 void ScreenshotWlRegistry::onWlOutputDone(void * /*data*/,
                                           wl_output * /*output*/) {}
 
@@ -143,8 +144,6 @@ const zxdg_output_v1_listener ScreenshotWlRegistry::XDG_OUTPUT_LISTENER = {
     .name = ScreenshotWlRegistry::onXdgOutputName,
     .description = ScreenshotWlRegistry::onXdgOutputDescription,
 };
-
-using XdgOutputPayload = WlOutputPayload;
 
 inline XdgOutputPayload *xdgOutputPayload(void *data) {
   return static_cast<XdgOutputPayload *>(data);

@@ -4,3 +4,6 @@ build
 # cache
 .cache
 .direnv
+
+# debug
+massif.out*

@@ -2,7 +2,9 @@
 
 // FIXME: this is not cross platform
 #include <cstdint>
+#include <private/wayland-wayland-client-protocol.h>
 #include <qabstracteventdispatcher.h>
+#include <qlogging.h>
 #include <qtypes.h>
 #include <sys/mman.h>
 
@@ -318,9 +320,11 @@ QUrl ScreenshotImageProvider::cache(QPixmap pixmap) {
 void ScreenshotImageProvider::free(const QUrl &url) {
   const auto urlString = url.toString();
   if (!urlString.startsWith(URL_PREFIX)) {
+    qWarning() << "ScreenshotImageProvider::free: invalid url " +
+                      url.toDisplayString();
     return;
   }
-  auto uuid = QUuid::fromString(urlString.sliced(urlString.length()));
+  auto uuid = QUuid::fromString(urlString.sliced(URL_PREFIX.length()));
   this->mCache.remove(uuid);
 }
 
@@ -375,9 +379,6 @@ void Screenshot::onWlScreencopyFrameReady(
 void Screenshot::onWlScreencopyFrameFailed(
     void *data, struct zwlr_screencopy_frame_v1 *frame) {
   const auto *payload = wlScreencopyFramePayload(data);
-  if (payload == nullptr) {
-    return;
-  }
   payload->onFailure();
   delete payload;
   zwlr_screencopy_frame_v1_destroy(frame);
@@ -394,9 +395,6 @@ void Screenshot::onWlScreencopyFrameLinuxDmabuf(
 void Screenshot::onWlScreencopyFrameBufferDone(
     void *data, struct zwlr_screencopy_frame_v1 *frame) {
   auto *payload = wlScreencopyFramePayload(data);
-  if (payload == nullptr) {
-    return;
-  }
   if (!std::holds_alternative<WlrScreencopyFrameMetadata>(payload->buffer)) {
     payload->onFailure();
     delete payload;
@@ -440,7 +438,7 @@ ShmBuffer::ShmBuffer(const QSize &size, wl_shm *shm, uint32_t format) {
 }
 
 ShmBuffer::~ShmBuffer() {
-  munmap(mImage.bits(), mImage.sizeInBytes());
-  wl_buffer_destroy(mHandle);
-  wl_shm_pool_destroy(mShmPool);
+  munmap(this->mImage.bits(), this->mImage.sizeInBytes());
+  wl_buffer_destroy(this->mHandle);
+  wl_shm_pool_destroy(this->mShmPool);
 }

@@ -8,6 +8,9 @@ mkShell {
     pkg-config
     wayland-protocols
     wayland-scanner
+    # debug tools
+    valgrind
+    massif-visualizer
   ];
   buildInputs = [
     qt6.qtbase

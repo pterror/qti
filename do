@@ -11,7 +11,7 @@ case $ACTION in
 		mkdir -p build
 		cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build
 		cd -;;
-	run|debug)
+	run|debug|massif)
 		ROOT=$(dirname $(realpath $0))
 		for DIR in $(ls -d plugin/*/build/qml_modules/)
 		do
@@ -21,6 +21,11 @@ case $ACTION in
 		then
 			cd $(dirname "$0")
 	  	QML2_IMPORT_PATH="$QML2_IMPORT_PATH" ./gdb_debug.py ./build/qti --path "$@"
+			cd -
+		elif [ "$ACTION" = "massif" ]
+		then
+			cd $(dirname "$0")
+	  	QML2_IMPORT_PATH="$QML2_IMPORT_PATH" valgrind --tool=massif -- ./build/qti --path "$@"
 			cd -
 		else
 			cd $(dirname "$0")

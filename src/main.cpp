@@ -8,7 +8,8 @@
 #include <QQuickWindow>
 #include <QRegularExpression>
 
-const auto NON_EMPTY_REG_EXP = QRegularExpression("([^/]+?)(?:[.]qml)?$");
+const auto FILE_DIRECTORY_AND_NAME_REG_EXP =
+    QRegularExpression("(.*)/([^/]+?)(?:[.]qml)?$");
 
 int main(int argc, char **argv) {
   const auto app = QGuiApplication(argc, argv);
@@ -26,14 +27,22 @@ int main(int argc, char **argv) {
   cliParser.unknownOptionNames();
 
   const auto path = cliParser.value(pathOption);
+  auto appDirectory = QString();
   auto appName = QString("qti");
   auto match = QRegularExpressionMatch();
-  if (path.contains(NON_EMPTY_REG_EXP, &match)) {
-    appName = match.captured(1);
+  if (path.contains(FILE_DIRECTORY_AND_NAME_REG_EXP, &match)) {
+    appDirectory = match.captured(1);
+    appName = match.captured(2);
   }
   QGuiApplication::setDesktopFileName(appName);
   QGuiApplication::setApplicationName(appName);
   QGuiApplication::setApplicationDisplayName(appName);
+
+  // TODO: configurable default theme name
+  QIcon::setThemeName("qti-dark");
+  auto themeSearchPaths = QIcon::themeSearchPaths();
+  themeSearchPaths.emplace_back(appDirectory + "/icons");
+  QIcon::setThemeSearchPaths(themeSearchPaths);
 
   const auto engine = QQmlApplicationEngine(path);
   QQuickWindow::setDefaultAlphaBuffer(true);

@@ -25,7 +25,7 @@ class Screenshot : public QObject { // NOLINT
   QML_SINGLETON;
 
 public:
-  Screenshot();
+  explicit Screenshot();
   ~Screenshot() override;
 
   // TODO: add onSuccess/onFailure to the other two apis too

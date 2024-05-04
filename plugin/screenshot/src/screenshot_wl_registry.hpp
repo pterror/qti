@@ -9,7 +9,8 @@ class ScreenshotWlRegistry : public QObject, public QtWayland::wl_registry {
   Q_OBJECT;
 
 public:
-  ScreenshotWlRegistry(wl_display *display, struct ::wl_registry *object);
+  explicit ScreenshotWlRegistry(wl_display *display,
+                                struct ::wl_registry *object);
 
   [[nodiscard]] QtWayland::wl_shm *shm() const;
   [[nodiscard]] QtWayland::zxdg_output_manager_v1 *xdgOutputManager() const;

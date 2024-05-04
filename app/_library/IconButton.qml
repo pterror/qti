@@ -6,8 +6,10 @@ Button {
 	default property alias content: mouseArea.children
 	property bool active: false
 	flat: true
-	display: AbstractButton.TextOnly
-  palette.buttonText: Theme.button.foregroundColor
+	display: AbstractButton.IconOnly
+	opacity: Theme.iconOpacity
+	icon.width: Theme.iconSize
+	icon.height: Theme.iconSize
 	background: Rectangle {
 		anchors.margins: Theme.button.margin
 		radius: Theme.button.radius
