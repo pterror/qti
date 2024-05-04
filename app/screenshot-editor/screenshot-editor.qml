@@ -118,30 +118,30 @@ QtObject {
 
 		Rectangle {
 			color: Theme.maskColor
-			width: parent.width
-			height: window.cropY
+			width: window?.width ?? 0
+			height: window?.cropY ?? 0
 		}
 
 		Rectangle {
 			color: Theme.maskColor
-			y: window.cropY + window.cropHeight
-			width: parent.width
-			height: window.height - window.cropY - window.cropHeight
+			y: window?.cropY + window?.cropHeight
+			width: window?.width ?? 0
+			height: window?.height - window?.cropY - window?.cropHeight
 		}
 
 		Rectangle {
 			color: Theme.maskColor
-			y: window.cropY
-			width: window.cropX
-			height: window.cropHeight
+			y: window?.cropY ?? 0
+			width: window?.cropX ?? 0
+			height: window?.cropHeight
 		}
 
 		Rectangle {
 			color: Theme.maskColor
-			x: window.cropX + window.cropWidth
-			y: window.cropY
-			width: window.width - window.cropWidth
-			height: window.cropHeight
+			x: window?.cropX + window?.cropWidth
+			y: window?.cropY ?? 0
+			width: window?.width - window?.cropWidth
+			height: window?.cropHeight ?? 0
 		}
 
 		MouseArea {
