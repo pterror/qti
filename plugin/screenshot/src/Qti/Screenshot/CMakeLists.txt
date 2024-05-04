@@ -3,9 +3,13 @@ find_package(Qt6 REQUIRED COMPONENTS Gui Quick WaylandClient)
 qt_add_qml_module(qti_screenshot URI Qti.Screenshot VERSION 0.1 SHARED
     SOURCES
     screenshot.cpp screenshot.hpp
+    # FIXME: remove
     screenshot_wl_registry.cpp screenshot_wl_registry.hpp
-    zwlr_screencopy_manager_v1.cpp zwlr_screencopy_manager_v1.hpp
-    zwlr_screencopy_frame_v1.cpp zwlr_screencopy_frame_v1.hpp
+    screenshot_image_provider.cpp screenshot_image_provider.hpp
+    zxdg_output_manager.cpp zxdg_output_manager.hpp
+    zxdg_output.cpp zxdg_output.hpp
+    zwlr_screencopy_manager.cpp zwlr_screencopy_manager.hpp
+    # zwlr_screencopy_frame.cpp zwlr_screencopy_frame.hpp
 )
 qt_generate_wayland_protocol_client_sources(
     qti_screenshot # PRIVATE_CODE

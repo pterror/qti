@@ -1,6 +1,10 @@
 #include "screenshot.hpp"
 
+#include "qimage_format_utils.hpp"
+#include "screenshot_image_provider.hpp"
 #include "zwlr_screencopy_manager.hpp"
+#include "zxdg_output.hpp"
+#include "zxdg_output_manager.hpp"
 
 // FIXME: this is not cross platform
 #include <cstdint>
@@ -20,13 +24,11 @@
 #include <QScreen>
 #include <QSocketNotifier>
 #include <QUuid>
+#include <QtGui/qpa/qplatformnativeinterface.h>
 #include <private/qguiapplication_p.h>
 #include <wayland-client-core.h>
 
 namespace {
-const auto IMAGE_PROVIDER_NAME = "qti_screenshot";
-const auto URL_PREFIX = QString("image://") + IMAGE_PROVIDER_NAME + "/";
-
 class ShmBuffer { // NOLINT
 public:
   ShmBuffer(const QSize &size, wl_shm *shm, uint32_t format);
@@ -57,132 +59,6 @@ QRect initialBounds() {
   return QRect(QPoint(MAX_INT, MAX_INT), QPoint(MIN_INT, MIN_INT));
 }
 
-// the following copyright notice applies ONLY to the following function, see
-// https://github.com/qt/qtwayland/blob/a1452b95f7758b059ef6994f09b2b9d88a0aa677/src/shared/qwaylandsharedmemoryformathelper_p.h#L19-L39
-// Copyright (C) 2020 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR
-// GPL-2.0-only OR GPL-3.0-only
-inline QImage::Format wlShmFormatToQImageFormat(uint32_t format) {
-  switch (format) {
-  case WL_SHM_FORMAT_XRGB8888: {
-    return QImage::Format_RGB32;
-  }
-  case WL_SHM_FORMAT_ARGB8888: {
-    return QImage::Format_ARGB32_Premultiplied;
-  }
-  case WL_SHM_FORMAT_RGB565: {
-    return QImage::Format_RGB16;
-  }
-  case WL_SHM_FORMAT_XRGB1555: {
-    return QImage::Format_RGB555;
-  }
-  case WL_SHM_FORMAT_RGB888: {
-    return QImage::Format_RGB888;
-  }
-  case WL_SHM_FORMAT_BGR888: {
-    return QImage::Format_BGR888;
-  }
-  case WL_SHM_FORMAT_XRGB4444: {
-    return QImage::Format_RGB444;
-  }
-  case WL_SHM_FORMAT_ARGB4444: {
-    return QImage::Format_ARGB4444_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XBGR8888: {
-    return QImage::Format_RGBX8888;
-  }
-  case WL_SHM_FORMAT_ABGR8888: {
-    return QImage::Format_RGBA8888_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XBGR2101010: {
-    return QImage::Format_BGR30;
-  }
-  case WL_SHM_FORMAT_ABGR2101010: {
-    return QImage::Format_A2BGR30_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XRGB2101010: {
-    return QImage::Format_RGB30;
-  }
-  case WL_SHM_FORMAT_ARGB2101010: {
-    return QImage::Format_A2RGB30_Premultiplied;
-  }
-  case WL_SHM_FORMAT_C8: {
-    return QImage::Format_Alpha8;
-  }
-  default: {
-    return QImage::Format_Invalid;
-  }
-  }
-}
-
-// see the note at the end of https://doc.qt.io/qt-6/qimage.html#Format-enum
-// ordered by, in order:
-// - invalid vs valid
-// - grayscale vs color
-// - alpha support (no alpha < 2 bit alpha < 8+ bit alpha)
-// - performance (lowest to highest)
-uint8_t qImageFormatScore(QImage::Format format) {
-  switch (format) {
-  case QImage::NImageFormats:
-  case QImage::Format_Invalid: {
-    return 0;
-  }
-  case QImage::Format_Mono:
-  case QImage::Format_MonoLSB:
-  case QImage::Format_Alpha8:
-  case QImage::Format_Grayscale8:
-  case QImage::Format_Grayscale16: {
-    return 1;
-  }
-  case QImage::Format_Indexed8:
-  case QImage::Format_RGB666:
-  case QImage::Format_RGB555:
-  case QImage::Format_RGB888:
-  case QImage::Format_RGB444:
-  case QImage::Format_BGR30:
-  case QImage::Format_RGB30:
-  case QImage::Format_BGR888:
-  case QImage::Format_RGBX16FPx4:
-  case QImage::Format_RGBX32FPx4: {
-    return 2;
-  }
-  case QImage::Format_RGB16:
-  case QImage::Format_RGBX8888:
-  case QImage::Format_RGBX64: {
-    return 3;
-  }
-  case QImage::Format_RGB32: {
-    return 4;
-  }
-  case QImage::Format_A2BGR30_Premultiplied:
-  case QImage::Format_A2RGB30_Premultiplied: {
-    return 5;
-  }
-  case QImage::Format_ARGB32:
-  case QImage::Format_ARGB8565_Premultiplied:
-  case QImage::Format_ARGB6666_Premultiplied:
-  case QImage::Format_ARGB8555_Premultiplied:
-  case QImage::Format_ARGB4444_Premultiplied:
-  case QImage::Format_RGBA8888:
-  case QImage::Format_RGBA64:
-  case QImage::Format_RGBA16FPx4:
-  case QImage::Format_RGBA16FPx4_Premultiplied:
-  case QImage::Format_RGBA32FPx4:
-  case QImage::Format_RGBA32FPx4_Premultiplied: {
-    return 6;
-  }
-  case QImage::Format_RGBA8888_Premultiplied:
-  case QImage::Format_RGBA64_Premultiplied: {
-    return 7;
-  }
-  case QImage::Format_ARGB32_Premultiplied: {
-    return 8;
-  }
-  default: {
-    return 0;
-  }
-  }
-}
 }; // namespace
 
 Screenshot::Screenshot()
@@ -192,51 +68,26 @@ Screenshot::Screenshot()
 
 Screenshot::~Screenshot() { wl_display_disconnect(this->mWlDisplay); }
 
-ScreenshotImageProvider *Screenshot::screenshotImageProvider() const {
-  auto *engine = qmlEngine(this);
-  auto *imageProviderBase = engine->imageProvider(IMAGE_PROVIDER_NAME);
-  if (imageProviderBase != nullptr) {
-    return dynamic_cast<ScreenshotImageProvider *>(imageProviderBase);
-  } else {
-    auto *imageProvider = new ScreenshotImageProvider();
-    engine->addImageProvider(IMAGE_PROVIDER_NAME, imageProvider);
-    return imageProvider;
-  }
+QUrl Screenshot::cache(const QPixmap &pixmap) const {
+  auto *provider = ScreenshotImageProvider::instance(qmlEngine(this));
+  return provider->cache(pixmap);
 }
 
-void Screenshot::captureAllScreens(const QJSValue &onSuccess,
-                                   const QJSValue &onFailure,
-                                   bool captureCursor) const {
-  if (ZwlrScreencopyManager::instance() == nullptr) {
-    const auto screens = QGuiApplication::screens();
-    auto pixmap = QPixmap();
-    if (screens.size() == 1) {
-      pixmap = screens[0]->grabWindow();
-    } else {
-      auto bounds = initialBounds();
-      for (auto *const screen : screens) {
-        const auto geometry = screen->geometry();
-        bounds.setLeft(std::min(bounds.left(), geometry.left()));
-        bounds.setRight(std::max(bounds.right(), geometry.right()));
-        bounds.setTop(std::min(bounds.top(), geometry.top()));
-        bounds.setBottom(std::max(bounds.bottom(), geometry.bottom()));
-      }
-      pixmap = QPixmap(bounds.width(), bounds.height());
-      auto painter = QPainter(&pixmap);
-      for (auto *const screen : screens) {
-        const auto screenBounds = screen->geometry();
-        painter.drawPixmap(screenBounds, screen->grabWindow());
-      }
-    }
-    const auto url = this->screenshotImageProvider()->cache(pixmap);
-    if (onSuccess.isCallable()) {
-      onSuccess.call(QJSValueList({qmlEngine(this)->toScriptValue(url)}));
-    }
+void Screenshot::free(const QUrl &url) const {
+  auto *provider = ScreenshotImageProvider::instance(qmlEngine(this));
+  provider->free(url);
+}
+
+inline QPixmap
+compositeAllScreens(const std::function<QPixmap(QScreen *, bool)> &getPixmap,
+                    bool captureCursor) {
+  const auto screens = QGuiApplication::screens();
+  if (screens.size() == 1) {
+    return getPixmap(screens[0], captureCursor);
   } else {
-    // TODO: optimize when there is only one output
-    auto failed = false;
     auto bounds = initialBounds();
-    for (const auto geometry : this->mWlRegistry->outputGeometries()) {
+    for (auto *const screen : screens) {
+      const auto geometry = screen->geometry();
       bounds.setLeft(std::min(bounds.left(), geometry.left()));
       bounds.setRight(std::max(bounds.right(), geometry.right()));
       bounds.setTop(std::min(bounds.top(), geometry.top()));
@@ -244,20 +95,63 @@ void Screenshot::captureAllScreens(const QJSValue &onSuccess,
     }
     auto pixmap = QPixmap(bounds.width(), bounds.height());
     auto painter = QPainter(&pixmap);
+    for (auto *const screen : screens) {
+      const auto screenBounds = screen->geometry();
+      painter.drawPixmap(screenBounds, getPixmap(screen, captureCursor));
+    }
+  }
+}
+
+QPixmap Screenshot::captureScreenInternal(QScreen *screen, bool captureCursor) {
+  // FIXME: this check probably doesn't work.
+  if (ZwlrScreencopyManager::instance() == nullptr) {
+    return screen->grabWindow();
+  } else {
+    return Screenshot::captureScreenInternalWayland(screen, captureCursor);
+  }
+}
+
+QPixmap Screenshot::captureScreenInternalWayland(QScreen *screen,
+                                                 bool captureCursor) {
+  auto *outputRaw =
+      QGuiApplication::platformNativeInterface()->nativeResourceForScreen(
+          "output", screen);
+  auto *output = static_cast<::wl_output *>(outputRaw);
+  auto *xdgOutputRaw =
+      ZxdgOutputManager::instance()->getXdgOutput(output)->object();
+  auto *xdgOutput = new ZxdgOutput(xdgOutputRaw);
+  QObject::connect(xdgOutput, &ZxdgOutput::done, this, nullptr /* TODO: */);
+}
+
+void Screenshot::captureAllScreens(const QJSValue &onSuccess,
+                                   const QJSValue &onFailure,
+                                   bool captureCursor) const {
+  const auto screens = QGuiApplication::screens();
+  const auto pixmap =
+      compositeAllScreens(&Screenshot::captureScreenInternal, captureCursor);
+  const auto url = this->cache(pixmap);
+  if (onSuccess.isCallable()) {
+    onSuccess.call(QJSValueList({qmlEngine(this)->toScriptValue(url)}));
+  }
+  // FIXME:
+  if (false) {
+    auto failed = false;
+    auto bounds = initialBounds();
+    auto pixmap = QPixmap(bounds.width(), bounds.height());
+    auto painter = QPainter(&pixmap);
     auto *screencopyManager = ZwlrScreencopyManager::instance();
     auto outputsLeft = this->mWlRegistry->outputs().size();
     for (auto kv : this->mWlRegistry->outputs().asKeyValueRange()) {
       auto id = kv.first;
       auto *output = kv.second;
-      auto *frame =
-          screencopyManager->capture_output(captureCursor ? 1 : 0, output);
+      auto *frame = screencopyManager->captureOutput(captureCursor, output);
       const auto onFrameSuccess = [&, this](ShmBuffer *buffer, uint id) {
         painter.drawImage(this->mWlRegistry->outputGeometries()[id],
                           buffer->mImage);
         delete buffer;
         outputsLeft -= 1;
         if (outputsLeft == 0) {
-          const auto url = this->screenshotImageProvider()->cache(pixmap);
+          const auto url = this->cache(pixmap);
           if (onSuccess.isCallable()) {
             onSuccess.call(QJSValueList({qmlEngine(this)->toScriptValue(url)}));
           }
@@ -284,50 +178,6 @@ void Screenshot::captureAllScreens(const QJSValue &onSuccess,
     wl_display_roundtrip(this->mWlDisplay);
     wl_display_roundtrip(this->mWlDisplay);
   }
-}
-
-// FIXME: use `captureCursor`
-QUrl Screenshot::capturePrimaryScreen(bool /*captureCursor*/) const {
-  auto *const screen = QGuiApplication::primaryScreen();
-  return this->screenshotImageProvider()->cache(screen->grabWindow());
-}
-
-QUrl Screenshot::captureScreen(int index, bool /*captureCursor*/) const {
-  auto *const screen = QGuiApplication::screens()[index];
-  return this->screenshotImageProvider()->cache(screen->grabWindow());
-}
-
-void Screenshot::free(const QUrl &url) const {
-  this->screenshotImageProvider()->free(url);
-}
-
-ScreenshotImageProvider::ScreenshotImageProvider()
-    : QQuickImageProvider(QQuickImageProvider::Pixmap) {}
-
-QPixmap
-ScreenshotImageProvider::requestPixmap(const QString &id, QSize *size,
-                                       const QSize & /*requestedSize*/) {
-  const auto uuid = QUuid::fromString(id);
-  auto pixmap = this->mCache[uuid];
-  *size = pixmap.size();
-  return pixmap;
-}
-
-QUrl ScreenshotImageProvider::cache(QPixmap pixmap) {
-  const auto uuid = QUuid::createUuid();
-  this->mCache[uuid] = std::move(pixmap);
-  return QUrl(URL_PREFIX + uuid.toString(QUuid::WithoutBraces));
-}
-
-void ScreenshotImageProvider::free(const QUrl &url) {
-  const auto urlString = url.toString();
-  if (!urlString.startsWith(URL_PREFIX)) {
-    qWarning() << "ScreenshotImageProvider::free: invalid url " +
-                      url.toDisplayString();
-    return;
-  }
-  auto uuid = QUuid::fromString(urlString.sliced(URL_PREFIX.length()));
-  this->mCache.remove(uuid);
 }
 
 const zwlr_screencopy_frame_v1_listener Screenshot::FRAME_LISTENER = {

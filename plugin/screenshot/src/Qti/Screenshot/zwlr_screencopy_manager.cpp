@@ -15,9 +15,8 @@ ZwlrScreencopyManager *ZwlrScreencopyManager::instance() {
 }
 
 QtWayland::zwlr_screencopy_frame_v1 *
-ZwlrScreencopyManager::captureOutput(int32_t overlayCursor,
-                                     ::wl_output *output) {
-  auto *frame = this->capture_output(overlayCursor, output);
+ZwlrScreencopyManager::captureOutput(bool overlayCursor, ::wl_output *output) {
+  auto *frame = this->capture_output(overlayCursor ? 1 : 0, output);
   return new QtWayland::zwlr_screencopy_frame_v1(frame);
 }
 

@@ -2,22 +2,9 @@
 
 #include "screenshot_wl_registry.hpp"
 
-#include <QQuickImageProvider>
+#include <QScreen>
 #include <QtQml/QQmlEngine>
-
-class ScreenshotImageProvider : public QQuickImageProvider {
-public:
-  ScreenshotImageProvider();
-
-  [[nodiscard]] QPixmap requestPixmap(const QString &id, QSize *size,
-                                      const QSize &requestedSize) override;
-
-  [[nodiscard]] QUrl cache(QPixmap pixmap);
-  void free(const QUrl &url);
-
-private:
-  QMap<QUuid, QPixmap> mCache;
-};
+#include <qtmetamacros.h>
 
 class Screenshot : public QObject { // NOLINT
   Q_OBJECT;
@@ -31,20 +18,16 @@ public:
   // TODO: add onSuccess/onFailure to the other two apis too
   // TODO: refactor async frame capture out to a helper function
   Q_INVOKABLE void
-  captureAllScreens(const QJSValue &onSuccess,
-                    const QJSValue &onFailure = QJSValue::NullValue,
-                    bool captureCursor = false) const;
-  Q_INVOKABLE [[nodiscard]] QUrl
-  capturePrimaryScreen(bool captureCursor = false) const;
-  Q_INVOKABLE [[nodiscard]] QUrl
-  captureScreen(int index, bool captureCursor = false) const;
+  captureScreens(QList<QScreen *> screens, const QJSValue &onSuccess,
+                 const QJSValue &onFailure = QJSValue::NullValue,
+                 bool captureCursor = false) const;
   Q_INVOKABLE void free(const QUrl &url) const;
 
 signals:
   void ready() const;
 
 private:
-  [[nodiscard]] ScreenshotImageProvider *screenshotImageProvider() const;
+  [[nodiscard]] QUrl cache(const QPixmap &pixmap) const;
   static Screenshot *resolve(void *data) {
     return static_cast<Screenshot *>(data);
   }
@@ -76,6 +59,10 @@ private:
 
   void onWlRegistryGlobal(uint32_t id, const QByteArray &interface);
   void onWlRegistryGlobalRemove(uint32_t id);
+
+  static QPixmap captureScreenInternal(QScreen *screen, bool captureCursor);
+  static QPixmap captureScreenInternalWayland(QScreen *screen,
+                                              bool captureCursor);
 
   bool mInitialized = false;
   wl_display *mWlDisplay = nullptr;
