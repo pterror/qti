@@ -2,12 +2,14 @@ with import <nixpkgs> { };
 mkShell {
   nativeBuildInputs = [
     cmake
-    kdePackages.qtshadertools
     qt6.wrapQtAppsHook
     makeWrapper
+    # for wayland
     pkg-config
     wayland-protocols
     wayland-scanner
+    # dev utility for compiling shaers
+    kdePackages.qtshadertools
     # debug tools
     valgrind
     massif-visualizer
