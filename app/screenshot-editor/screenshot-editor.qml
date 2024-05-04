@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
-import Qti.QGuiApplication
+import Qti.Core
 import Qti.Screenshot
 import Qti.Clipboard
 import "../_library"
@@ -40,7 +40,7 @@ QtObject {
 		property var currentDecoration: undefined
 		property list<var> redoStack: []
 		Component.onCompleted: {
-			QGuiApplication.quitOnLastWindowClosed = false
+			QtiCore.quitOnLastWindowClosed = false
 			Screenshot.captureAllScreens(url => { screenshotUrl = url })
 		}
 
@@ -65,14 +65,14 @@ QtObject {
 							window.cropWidth !== image.implicitWidth || window.cropHeight !== image.implicitHeight
 						) {
 							const cropRect = Qt.rect(window.cropX, window.cropY, window.cropWidth, window.cropHeight)
-							image = QGuiApplication.copyImage(image, cropRect)
+							image = QtiCore.copyImage(image, cropRect)
 						}
 						Clipboard.setImage(image)
 						Screenshot.free(window.screenshotUrl)
 						if (window.daemonizeOnCopy) {
 							closeOnCopyDate = Number(new Date()) + 50
 							window.close()
-							QGuiApplication.deleteLater(window)
+							QtiCore.deleteLater(window)
 						}
 					})
 				}

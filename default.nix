@@ -1,32 +1,36 @@
-{
-  lib,
-  nix-gitignore,
-  pkgs,
-  keepDebugInfo,
-  buildStdenv ? pkgs.clang17Stdenv,
-
-  cmake,
-  ninja,
-  qt6,
-  wayland,
-  wayland-protocols,
-
-  gitRev ? (let
-    headExists = builtins.pathExists ./.git/HEAD;
-    headContent = builtins.readFile ./.git/HEAD;
-  in if headExists
-     then (let
-       matches = builtins.match "ref: refs/heads/(.*)\n" headContent;
-     in if matches != null
+{ lib
+, nix-gitignore
+, pkgs
+, keepDebugInfo
+, buildStdenv ? pkgs.clang17Stdenv
+, cmake
+, ninja
+, qt6
+, wayland
+, wayland-protocols
+, gitRev ? (
+    let
+      headExists = builtins.pathExists ./.git/HEAD;
+      headContent = builtins.readFile ./.git/HEAD;
+    in
+    if headExists
+    then
+      (
+        let
+          matches = builtins.match "ref: refs/heads/(.*)\n" headContent;
+        in
+        if matches != null
         then builtins.readFile ./.git/refs/heads/${builtins.elemAt matches 0}
-        else headContent)
-     else "unknown"),
-
-  debug ? false,
-  enableWayland ? true,
-  nvidiaCompat ? false,
-  svgSupport ? true, # you almost always want this
-}: buildStdenv.mkDerivation {
+        else headContent
+      )
+    else "unknown"
+  )
+, debug ? false
+, enableWayland ? true
+, nvidiaCompat ? false
+, svgSupport ? true
+, # you almost always want this
+}: buildStdenv.mkDerivation rec {
   pname = "qti${lib.optionalString debug "-debug"}";
   version = "0.1.0";
   src = ./.;
@@ -50,16 +54,24 @@
 
   QTWAYLANDSCANNER = lib.optionalString enableWayland "${qt6.qtwayland}/libexec/qtwaylandscanner";
 
-  configurePhase = let
-    cmakeBuildType = if debug
-                     then "Debug"
-                     else "RelWithDebInfo";
-  in ''
-    cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
-    cmakeConfigurePhase
-  '';
+  configurePhase =
+    let
+      cmakeBuildType =
+        if debug
+        then "Debug"
+        else "RelWithDebInfo";
+    in
+    ''
+      cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
+      cmakeConfigurePhase
+    '';
+
+  qtPluginPrefix = "lib/qt-6/plugins";
+  qtQmlPrefix = "lib/qt-6/qml";
 
   cmakeFlags = [
+    "-DINSTALL_PLUGINSDIR=${qtPluginPrefix}"
+    "-DINSTALL_QMLDIR=${qtQmlPrefix}"
     "-DGIT_REVISION=${gitRev}"
   ] ++ lib.optional (!enableWayland) "-DWAYLAND=OFF"
   ++ lib.optional nvidiaCompat "-DNVIDIA_COMPAT=ON";

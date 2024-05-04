@@ -7,9 +7,9 @@
 #include <qclipboard.h>
 #include <qtmetamacros.h>
 
-class QQGuiApplication : public QObject { // NOLINT
+class Core : public QObject { // NOLINT
   Q_OBJECT;
-  QML_NAMED_ELEMENT(QGuiApplication);
+  QML_NAMED_ELEMENT(QtiCore);
   QML_SINGLETON;
 
   Q_PROPERTY(

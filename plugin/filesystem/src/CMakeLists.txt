@@ -8,7 +8,7 @@ qt_standard_project_setup()
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml_modules)
 
 qt_add_library(
-    qt_file_system
+    qti_file_system
     SHARED
     file.cpp
     file.hpp
@@ -18,10 +18,10 @@ qt_add_library(
     filesystem_entry.hpp
 )
 
-qt_add_qml_module(qt_file_system URI Qti.Filesystem VERSION 0.1)
+qt_add_qml_module(qti_file_system URI Qti.Filesystem VERSION 0.1)
 
-install(TARGETS qt_file_system
+install(TARGETS qti_file_system
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-target_link_libraries(qt_file_system PRIVATE Qt::Core Qt6::Qml)
+target_link_libraries(qti_file_system PRIVATE Qt::Core Qt6::Qml)

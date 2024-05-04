@@ -41,20 +41,20 @@ qt_add_dbus_interface(DBUS_INTERFACES ../dep/xdg-desktop-portal/data/org.freedes
 qt_add_dbus_interface(DBUS_INTERFACES ../dep/xdg-desktop-portal/data/org.freedesktop.portal.Wallpaper.xml portal_wallpaper)
 
 qt_add_library(
-    qt_xdg_desktop_portal
+    qti_xdg_desktop_portal
     SHARED
     ${DBUS_INTERFACES}
     xdp_screenshot.cpp
     xdp_screenshot.hpp
 )
 
-qt_add_qml_module(qt_xdg_desktop_portal URI Qti.XdgDesktopPortal VERSION 0.1)
+qt_add_qml_module(qti_xdg_desktop_portal URI Qti.XdgDesktopPortal VERSION 0.1)
 
 # dbus headers
-target_include_directories(qt_xdg_desktop_portal PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(qti_xdg_desktop_portal PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-install(TARGETS qt_xdg_desktop_portal
+install(TARGETS qti_xdg_desktop_portal
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-target_link_libraries(qt_xdg_desktop_portal PRIVATE Qt::Core Qt6::Gui Qt::Qml Qt::Quick Qt::DBus)
+target_link_libraries(qti_xdg_desktop_portal PRIVATE Qt::Core Qt6::Gui Qt::Qml Qt::Quick Qt::DBus)
