@@ -10,7 +10,7 @@ qt_add_library(qti_core SHARED
     core.hpp
 )
 
-qt_add_qml_module(qti_core URI Qti.Core VERSION 0.1 PLUGIN_TARGET qti_core_plugin)
+qt_add_qml_module(qti_core URI Qti.Core VERSION 0.1)
 
 install(TARGETS qti_core
     BUNDLE  DESTINATION .

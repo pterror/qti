@@ -16,7 +16,7 @@ qt_add_library(qti_file_system SHARED
     filesystem_entry.hpp
 )
 
-qt_add_qml_module(qti_file_system URI Qti.Filesystem VERSION 0.1 PLUGIN_TARGET qti_file_system_plugin)
+qt_add_qml_module(qti_file_system URI Qti.Filesystem VERSION 0.1)
 
 install(TARGETS qti_file_system
     BUNDLE  DESTINATION .

@@ -10,7 +10,7 @@ qt_add_library(qti_clipboard SHARED
     clipboard.hpp
 )
 
-qt_add_qml_module(qti_clipboard URI Qti.Clipboard VERSION 0.1 PLUGIN_TARGET qti_clipboard_plugin)
+qt_add_qml_module(qti_clipboard URI Qti.Clipboard VERSION 0.1)
 
 install(TARGETS qti_clipboard
     BUNDLE  DESTINATION .
