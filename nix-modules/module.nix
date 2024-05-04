@@ -26,11 +26,9 @@
   )
 , debug ? false
 , enableWayland ? true
-, svgSupport ? true # you almost always want this
-}: buildStdenv.mkDerivation rec {
-  pname = "qti${lib.optionalString debug "-debug"}";
-  version = "0.0.1";
-  src = ./.;
+}: args: buildStdenv.mkDerivation (args // rec {
+  pname = "${args.pname}${lib.optionalString debug "-debug"}";
+  version = args.version or "0.0.1";
   nativeBuildInputs = with pkgs; [
     cmake
     ninja
@@ -44,8 +42,10 @@
     qt6.qtbase
     qt6.qtdeclarative
   ]
-  ++ (lib.optionals enableWayland [ qt6.qtwayland wayland ])
-  ++ (lib.optionals svgSupport [ qt6.qtsvg ]);
+  ++ (lib.optionals enableWayland [ qt6.qtwayland wayland ]);
+
+  QTWAYLANDSCANNER = lib.optionalString enableWayland "${qt6.qtwayland}/libexec/qtwaylandscanner";
+
   configurePhase =
     let
       cmakeBuildType = if debug then "Debug" else "RelWithDebInfo";
@@ -54,14 +54,22 @@
       cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
       cmakeConfigurePhase
     '';
-  cmakeFlags = [ "-DGIT_REVISION=${gitRev}" ];
+
+  qtPluginPrefix = "lib/qt-6/plugins";
+
+  cmakeFlags = [
+    "-DINSTALL_PLUGINSDIR=${qtPluginPrefix}"
+    "-DGIT_REVISION=${gitRev}"
+  ] ++ lib.optional (!enableWayland) "-DWAYLAND=OFF";
+
   buildPhase = "ninjaBuildPhase";
   enableParallelBuilding = true;
   dontStrip = true;
+
   meta = with lib; {
     homepage = "https://github.com/pterror/qti";
     description = "Qt interpreter";
     license = licenses.isc;
     platforms = platforms.linux;
-  };
-}
+  } // (args.meta or { });
+})

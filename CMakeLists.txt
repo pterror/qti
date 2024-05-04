@@ -16,7 +16,7 @@ if (CMAKE_EXPORT_COMPILE_COMMANDS)
 endif()
 
 add_compile_options(-Wall -Wextra)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Svg WaylandClient) # DBus
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Svg WaylandClient)
 qt_standard_project_setup()
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml_modules)
 qt_add_executable(qti src/main.cpp)

@@ -1,17 +1,5 @@
-{ qtModule
-, qtbase
-, libwebp
-, jasper
-, libmng
-, zlib
-, pkg-config
-, lib
-, stdenv
-}:
-
-qtModule {
+{ pkgs }:
+(pkgs.callPackage ./module.nix { }) {
   pname = "qti-clipboard";
-  propagatedBuildInputs = [ qtbase ];
-  buildInputs = [ ];
-  nativeBuildInputs = [ pkg-config ];
+  src = ../plugin/clipboard;
 }
