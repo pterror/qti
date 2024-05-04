@@ -11,7 +11,7 @@ qt_add_library(qti_screenshot SHARED
     screenshot_wl_registry.hpp
 )
 
-qt_add_qml_module(qti_screenshot URI Qti.Screenshot VERSION 0.1)
+qt_add_qml_module(qti_screenshot URI Qti.Screenshot VERSION 0.1 PLUGIN_TARGET qti_screenshot_plugin)
 
 qt_generate_wayland_protocol_client_sources(
     qti_screenshot # PRIVATE_CODE
