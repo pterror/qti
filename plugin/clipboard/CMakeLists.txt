@@ -20,4 +20,5 @@ if(QT_KNOWN_POLICY_QTP0001)
     qt_policy(SET QTP0001 NEW)
 endif()
 
+qt_standard_project_setup()
 add_subdirectory(src/Qti/Clipboard)

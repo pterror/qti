@@ -56,9 +56,11 @@
     '';
 
   qtPluginPrefix = "lib/qt-6/plugins";
+  qtQmlPrefix = "lib/qt-6/qml";
 
   cmakeFlags = [
     "-DINSTALL_PLUGINSDIR=${qtPluginPrefix}"
+    "-DINSTALL_QMLDIR=${qtQmlPrefix}"
     "-DGIT_REVISION=${gitRev}"
   ] ++ lib.optional (!enableWayland) "-DWAYLAND=OFF";
 
