@@ -43,9 +43,7 @@
     qt6.qtdeclarative
   ]
   ++ (lib.optionals enableWayland [ qt6.qtwayland wayland ]);
-
   QTWAYLANDSCANNER = lib.optionalString enableWayland "${qt6.qtwayland}/libexec/qtwaylandscanner";
-
   configurePhase =
     let
       cmakeBuildType = if debug then "Debug" else "RelWithDebInfo";
@@ -54,20 +52,14 @@
       cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
       cmakeConfigurePhase
     '';
-
-  qtPluginPrefix = "lib/qt-6/plugins";
-  qtQmlPrefix = "lib/qt-6/qml";
-
   cmakeFlags = [
-    "-DINSTALL_PLUGINSDIR=${qtPluginPrefix}"
-    "-DINSTALL_QMLDIR=${qtQmlPrefix}"
+    "-DINSTALL_PLUGINSDIR=${qt6.qtbase.qtPluginPrefix}"
+    "-DINSTALL_QMLDIR=${qt6.qtbase.qtQmlPrefix}"
     "-DGIT_REVISION=${gitRev}"
   ] ++ lib.optional (!enableWayland) "-DWAYLAND=OFF";
-
   buildPhase = "ninjaBuildPhase";
   enableParallelBuilding = true;
   dontStrip = true;
-
   meta = with lib; {
     homepage = "https://github.com/pterror/qti";
     description = "Qt interpreter";
