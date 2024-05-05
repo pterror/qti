@@ -21,7 +21,7 @@ QtObject {
 	property QtiWindow window: QtiWindow {
 		id: window
 		margins: 0
-		property url screenshotUrl: Screenshot.capture(Qt.application.screens)
+		property url screenshotUrl: ""
 		property string currentTool: "crop"
 		property var fillColor: "transparent"
 		property var strokeColor: "white"
@@ -38,7 +38,14 @@ QtObject {
 		property var tools: ["pointer", "crop", "pen", "ellipse", "rectangle"]
 		property var currentDecoration: undefined
 		property list<var> redoStack: []
-		Component.onCompleted: QtiCore.quitOnLastWindowClosed = false
+		Component.onCompleted: {
+			Screenshot.capture(
+				Qt.application.screens,
+				result => { screenshotUrl = result },
+				() => { Qt.quit() },
+			)
+			QtiCore.quitOnLastWindowClosed = false
+		}
 
 		Item {
 			id: root

@@ -1,5 +1,5 @@
 # https://doc.qt.io/qt-6/cmake-build-reusable-qml-module.html
-find_package(Qt6 REQUIRED COMPONENTS Gui Quick WaylandClient Test)
+find_package(Qt6 REQUIRED COMPONENTS Gui Quick WaylandClient)
 qt_add_qml_module(qti_screenshot URI Qti.Screenshot VERSION 0.1 SHARED
     SOURCES
     screenshot.cpp screenshot.hpp
@@ -15,4 +15,4 @@ install(TARGETS qti_screenshot)
 install(DIRECTORY "${QT_QML_OUTPUT_DIRECTORY}" DESTINATION "${INSTALL_QMLDIR}")
 get_target_property(TARGET_PATH qti_screenshot QT_QML_MODULE_TARGET_PATH)
 install(TARGETS qti_screenshotplugin LIBRARY DESTINATION "${INSTALL_QMLDIR}/${TARGET_PATH}")
-target_link_libraries(qti_screenshot PRIVATE Qt::Core Qt6::Gui Qt::Qml Qt::Quick Qt::Test Qt::QuickPrivate Qt6::WaylandClient Qt6::WaylandClientPrivate Wayland::Client)
+target_link_libraries(qti_screenshot PRIVATE Qt::Core Qt6::Gui Qt::Qml Qt::Quick Qt::QuickPrivate Qt6::WaylandClient Qt6::WaylandClientPrivate Wayland::Client)
