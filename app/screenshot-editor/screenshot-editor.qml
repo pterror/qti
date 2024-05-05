@@ -14,7 +14,6 @@ QtObject {
 		target: Clipboard
 		function onChanged(mode) {
 			if (closeOnCopyDate === 0 || Number(new Date()) < closeOnCopyDate || mode !== Clipboard.Global) return
-			console.log(realRoot.window)
 			Qt.quit()
 		}
 	}
@@ -22,7 +21,7 @@ QtObject {
 	property QtiWindow window: QtiWindow {
 		id: window
 		margins: 0
-		property url screenshotUrl: ""
+		property url screenshotUrl: Screenshot.capture(Qt.application.screens)
 		property string currentTool: "crop"
 		property var fillColor: "transparent"
 		property var strokeColor: "white"
@@ -39,10 +38,7 @@ QtObject {
 		property var tools: ["pointer", "crop", "pen", "ellipse", "rectangle"]
 		property var currentDecoration: undefined
 		property list<var> redoStack: []
-		Component.onCompleted: {
-			QtiCore.quitOnLastWindowClosed = false
-			Screenshot.captureAllScreens(url => { screenshotUrl = url })
-		}
+		Component.onCompleted: QtiCore.quitOnLastWindowClosed = false
 
 		Item {
 			id: root

@@ -1,7 +1,8 @@
 #pragma once
 
+#include <QQmlEngine>
 #include <QScreen>
-#include <QtQml/QQmlEngine>
+#include <QtQuick/private/qquickscreen_p.h>
 
 class Screenshot : public QObject {
   Q_OBJECT;
@@ -9,9 +10,8 @@ class Screenshot : public QObject {
   QML_SINGLETON;
 
 public:
-  Q_INVOKABLE [[nodiscard]] QUrl
-  captureScreens(const QList<QScreen *> &screens,
-                 bool captureCursor = false) const;
+  Q_INVOKABLE [[nodiscard]] QUrl capture(const QQmlListReference &screens,
+                                         bool captureCursor = false) const;
   Q_INVOKABLE void free(const QUrl &url) const;
 
 signals:

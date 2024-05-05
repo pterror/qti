@@ -1,10 +1,11 @@
 #pragma once
 
-#include "shm_buffer.hpp"
-
 #include <QtQml/QQmlEngine>
 #include <QtWaylandClient>
+#include <private/qwaylandscreen_p.h>
+#include <private/qwaylandshmbackingstore_p.h>
 #include <private/wayland-wayland-client-protocol.h>
+#include <qqmlintegration.h>
 #include <qwayland-wlr-screencopy-unstable-v1.h>
 
 class ZwlrScreencopyFrame
@@ -12,16 +13,18 @@ class ZwlrScreencopyFrame
       public QtWayland::zwlr_screencopy_frame_v1 {
   Q_OBJECT;
   QML_NAMED_ELEMENT(ZwlrScreencopyFrame);
+  QML_UNCREATABLE("Wrapper around Wayland type");
 
 public:
-  explicit ZwlrScreencopyFrame(struct ::zwlr_screencopy_frame_v1 *object);
+  explicit ZwlrScreencopyFrame(struct ::zwlr_screencopy_frame_v1 *object,
+                               QtWaylandClient::QWaylandScreen *screen);
 
   void copy(struct ::wl_buffer *buffer);
   void destroy();
   void copyWithDamage(struct ::wl_buffer *buffer);
 
 signals:
-  void ready(ShmBuffer *buffer);
+  void ready(QtWaylandClient::QWaylandShmBuffer *buffer);
   void failed();
 
 private:
@@ -38,7 +41,8 @@ private:
                                              uint32_t height) override;
   void zwlr_screencopy_frame_v1_buffer_done() override;
 
-  ShmBuffer *mBuffer = nullptr;
+  QtWaylandClient::QWaylandShmBuffer *mBuffer = nullptr;
+  QtWaylandClient::QWaylandScreen *mScreen;
   // default to a format with a low score
   ::wl_shm_format mFormat = WL_SHM_FORMAT_C8;
   int mWidth = 0;

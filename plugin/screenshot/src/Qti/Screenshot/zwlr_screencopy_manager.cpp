@@ -14,16 +14,17 @@ ZwlrScreencopyManager *ZwlrScreencopyManager::instance() {
   return instance;
 }
 
-ZwlrScreencopyFrame *ZwlrScreencopyManager::captureOutput(bool overlayCursor,
-                                                          ::wl_output *output) {
-  auto *frame = this->capture_output(overlayCursor ? 1 : 0, output);
-  return new ZwlrScreencopyFrame(frame);
+ZwlrScreencopyFrame *
+ZwlrScreencopyManager::captureOutput(bool overlayCursor,
+                                     QtWaylandClient::QWaylandScreen *screen) {
+  auto *frame = this->capture_output(overlayCursor ? 1 : 0, screen->output());
+  return new ZwlrScreencopyFrame(frame, screen);
 }
 
 ZwlrScreencopyFrame *ZwlrScreencopyManager::captureOutputRegion(
-    int32_t overlayCursor, ::wl_output *output, int32_t x, int32_t y,
-    int32_t width, int32_t height) {
-  auto *frame =
-      this->capture_output_region(overlayCursor, output, x, y, width, height);
-  return new ZwlrScreencopyFrame(frame);
+    int32_t overlayCursor, QtWaylandClient::QWaylandScreen *screen, int32_t x,
+    int32_t y, int32_t width, int32_t height) {
+  auto *frame = this->capture_output_region(overlayCursor, screen->output(), x,
+                                            y, width, height);
+  return new ZwlrScreencopyFrame(frame, screen);
 }

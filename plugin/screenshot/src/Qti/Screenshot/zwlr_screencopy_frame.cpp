@@ -1,13 +1,15 @@
 #include "zwlr_screencopy_frame.hpp"
 #include "qimage_format_utils.hpp"
 
-#include <QtGui/qpa/qplatformnativeinterface.h>
-#include <QtWaylandClient/private/qwaylanddisplay_p.h>
+#include <private/qwaylandshm_p.h>
 
-ZwlrScreencopyFrame::ZwlrScreencopyFrame(::zwlr_screencopy_frame_v1 *object)
+ZwlrScreencopyFrame::ZwlrScreencopyFrame(
+    ::zwlr_screencopy_frame_v1 *object, QtWaylandClient::QWaylandScreen *screen)
     : QWaylandClientExtensionTemplate<ZwlrScreencopyFrame>(
           this->extensionInterface()->version),
-      QtWayland::zwlr_screencopy_frame_v1(object) {}
+      QtWayland::zwlr_screencopy_frame_v1(object), mScreen(screen) {
+  this->initialize();
+}
 
 void ZwlrScreencopyFrame::zwlr_screencopy_frame_v1_buffer(uint32_t format,
                                                           uint32_t width,
@@ -46,15 +48,9 @@ void ZwlrScreencopyFrame::zwlr_screencopy_frame_v1_damage(uint32_t /*x*/,
 void ZwlrScreencopyFrame::zwlr_screencopy_frame_v1_linux_dmabuf(
     uint32_t /*format*/, uint32_t /*width*/, uint32_t /*height*/) {}
 
-inline QtWaylandClient::QWaylandDisplay *wlDisplay() {
-  auto *display =
-      QGuiApplication::platformNativeInterface()->nativeResourceForIntegration(
-          "display");
-  return static_cast<QtWaylandClient::QWaylandDisplay *>(display);
-}
-
 void ZwlrScreencopyFrame::zwlr_screencopy_frame_v1_buffer_done() {
-  this->mBuffer = new ShmBuffer(QSize(this->mWidth, this->mHeight),
-                                wlDisplay()->shm()->object(), this->mFormat);
-  zwlr_screencopy_frame_v1_copy(this->object(), this->mBuffer->mHandle);
+  this->mBuffer = new QtWaylandClient::QWaylandShmBuffer(
+      this->mScreen->display(), QSize(this->mWidth, this->mHeight),
+      QtWaylandClient::QWaylandShm::formatFrom(this->mFormat));
+  zwlr_screencopy_frame_v1_copy(this->object(), this->mBuffer->buffer());
 }

@@ -13,7 +13,7 @@ case $ACTION in
 		cd -;;
 	run|debug|massif)
 		ROOT=$(dirname $(realpath $0))
-		for DIR in $(ls -d plugin/*/build/src/)
+		for DIR in $(ls -d plugin/*/build/qml/)
 		do
 			QML2_IMPORT_PATH="$ROOT/$DIR:$QML2_IMPORT_PATH"
 		done

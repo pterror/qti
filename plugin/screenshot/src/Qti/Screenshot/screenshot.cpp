@@ -2,21 +2,14 @@
 
 // FIXME: this is not cross platform
 #include "screenshot_image_provider.hpp"
-#include "shm_buffer.hpp"
 #include "zwlr_screencopy_frame.hpp"
 #include "zwlr_screencopy_manager.hpp"
 
 #include <limits>
 
-#include <QtGui/qpa/qplatformnativeinterface.h>
-#include <QtWaylandClient/private/qwaylanddisplay_p.h>
-
-inline QtWaylandClient::QWaylandDisplay *wlDisplay() {
-  auto *display =
-      QGuiApplication::platformNativeInterface()->nativeResourceForIntegration(
-          "display");
-  return static_cast<QtWaylandClient::QWaylandDisplay *>(display);
-}
+#include <QSignalSpy>
+#include <private/qwaylanddisplay_p.h>
+#include <qnamespace.h>
 
 void Screenshot::free(const QUrl &url) const {
   auto *provider = ScreenshotImageProvider::instance(qmlEngine(this));
@@ -25,46 +18,51 @@ void Screenshot::free(const QUrl &url) const {
 
 QImage Screenshot::grabWindowWaylandInternal(QScreen *screen,
                                              bool captureCursor) const {
-  auto *outputRaw =
-      QGuiApplication::platformNativeInterface()->nativeResourceForScreen(
-          "output", screen);
-  auto *output = static_cast<::wl_output *>(outputRaw);
+  auto *wlScreen =
+      dynamic_cast<QtWaylandClient::QWaylandScreen *>(screen->handle());
   auto *screencopyManager = ZwlrScreencopyManager::instance();
-  auto *frame = screencopyManager->captureOutput(captureCursor, output);
+  auto *frame = screencopyManager->captureOutput(captureCursor, wlScreen);
   auto image = QImage();
-  const auto onReady = [&](ShmBuffer *buffer) {
-    image = buffer->mImage;
+  const auto onReady = [&](QtWaylandClient::QWaylandShmBuffer *buffer) {
+    image = std::move(*buffer->image());
     delete buffer;
   };
   QObject::connect(frame, &ZwlrScreencopyFrame::ready, this, onReady);
-  wlDisplay()->forceRoundTrip();
+  QSignalSpy spy(frame, &ZwlrScreencopyFrame::ready);
+  spy.wait();
   return image;
 }
 
-QUrl Screenshot::captureScreens(const QList<QScreen *> &screens,
-                                bool captureCursor) const {
+QUrl Screenshot::capture(const QQmlListReference &screens,
+                         bool captureCursor) const {
   auto pixmap = QPixmap();
   if (screens.size() == 1) {
+    auto *screen =
+        dynamic_cast<QQuickScreenInfo *>(screens.at(0))->wrappedScreen();
     if (!ZwlrScreencopyManager::instance()->isActive()) {
-      pixmap = screens[0]->grabWindow();
+      pixmap = screen->grabWindow();
     } else {
       pixmap = QPixmap::fromImage(
-          this->grabWindowWaylandInternal(screens[0], captureCursor));
+          this->grabWindowWaylandInternal(screen, captureCursor));
     }
   } else {
     const auto minInt = std::numeric_limits<int>::min();
     const auto maxInt = std::numeric_limits<int>::max();
     auto bounds = QRect(QPoint(maxInt, maxInt), QPoint(minInt, minInt));
-    for (auto *const screen : screens) {
+    for (auto i = 0; i < screens.size(); i += 1) {
+      auto *screen =
+          dynamic_cast<QQuickScreenInfo *>(screens.at(i))->wrappedScreen();
       const auto geometry = screen->geometry();
       bounds.setLeft(std::min(bounds.left(), geometry.left()));
       bounds.setRight(std::max(bounds.right(), geometry.right()));
       bounds.setTop(std::min(bounds.top(), geometry.top()));
       bounds.setBottom(std::max(bounds.bottom(), geometry.bottom()));
     }
-    auto pixmap = QPixmap(bounds.width(), bounds.height());
+    pixmap = QPixmap(bounds.width(), bounds.height());
     auto painter = QPainter(&pixmap);
-    for (auto *const screen : screens) {
+    for (auto i = 0; i < screens.size(); i += 1) {
+      auto *screen =
+          dynamic_cast<QQuickScreenInfo *>(screens.at(i))->wrappedScreen();
       const auto screenBounds = screen->geometry();
       if (!ZwlrScreencopyManager::instance()->isActive()) {
         painter.drawPixmap(screenBounds, screen->grabWindow());
