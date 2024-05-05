@@ -1,65 +1,6 @@
 #pragma once
 
 #include <QImage>
-#include <private/wayland-wayland-client-protocol.h>
-
-// the following copyright notice applies ONLY to the following function, see
-// https://github.com/qt/qtwayland/blob/a1452b95f7758b059ef6994f09b2b9d88a0aa677/src/shared/qwaylandsharedmemoryformathelper_p.h#L19-L39
-// Copyright (C) 2020 The Qt Company Ltd.
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR
-// GPL-2.0-only OR GPL-3.0-only
-inline QImage::Format wlShmFormatToQImageFormat(uint32_t format) {
-  switch (format) {
-  case WL_SHM_FORMAT_XRGB8888: {
-    return QImage::Format_RGB32;
-  }
-  case WL_SHM_FORMAT_ARGB8888: {
-    return QImage::Format_ARGB32_Premultiplied;
-  }
-  case WL_SHM_FORMAT_RGB565: {
-    return QImage::Format_RGB16;
-  }
-  case WL_SHM_FORMAT_XRGB1555: {
-    return QImage::Format_RGB555;
-  }
-  case WL_SHM_FORMAT_RGB888: {
-    return QImage::Format_RGB888;
-  }
-  case WL_SHM_FORMAT_BGR888: {
-    return QImage::Format_BGR888;
-  }
-  case WL_SHM_FORMAT_XRGB4444: {
-    return QImage::Format_RGB444;
-  }
-  case WL_SHM_FORMAT_ARGB4444: {
-    return QImage::Format_ARGB4444_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XBGR8888: {
-    return QImage::Format_RGBX8888;
-  }
-  case WL_SHM_FORMAT_ABGR8888: {
-    return QImage::Format_RGBA8888_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XBGR2101010: {
-    return QImage::Format_BGR30;
-  }
-  case WL_SHM_FORMAT_ABGR2101010: {
-    return QImage::Format_A2BGR30_Premultiplied;
-  }
-  case WL_SHM_FORMAT_XRGB2101010: {
-    return QImage::Format_RGB30;
-  }
-  case WL_SHM_FORMAT_ARGB2101010: {
-    return QImage::Format_A2RGB30_Premultiplied;
-  }
-  case WL_SHM_FORMAT_C8: {
-    return QImage::Format_Alpha8;
-  }
-  default: {
-    return QImage::Format_Invalid;
-  }
-  }
-}
 
 // see the note at the end of https://doc.qt.io/qt-6/qimage.html#Format-enum
 // ordered by, in order:
