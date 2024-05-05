@@ -5,6 +5,10 @@ Window {
 	visible: true
 	default property alias content: container.children
 	property alias margins: container.anchors.margins
+	palette.text: Theme.foregroundColor
+	palette.base: Theme.backgroundColor
+	palette.windowText: Theme.foregroundColor
+	palette.window: Theme.backgroundColor
 
 	Rectangle {
 		anchors.fill: parent
