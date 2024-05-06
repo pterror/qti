@@ -27,7 +27,7 @@
 , debug ? false
 , enableWayland ? true
 }: args: buildStdenv.mkDerivation (args // rec {
-  pname = "${args.pname}${lib.optionalString debug "-debug"}";
+  pname = "qti-plugin-${args.pname}${lib.optionalString debug "-debug"}";
   version = args.version or "0.0.1";
   nativeBuildInputs = with pkgs; [
     cmake

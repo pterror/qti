@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import Qti.Filesystem
-import "../_library"
+import "../stdlib"
 
 // TODO: icons from QFileIconProvider
 QtiWindow {
