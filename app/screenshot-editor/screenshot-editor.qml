@@ -26,6 +26,8 @@ QtObject {
 		margins: 0
 		property url screenshotUrl: ""
 		property string currentTool: "crop"
+		property string fontFamily: Qt.application.font.family
+		property int fontSize: Qt.application.font.pointSize
 		property var fillColor: "#00000000"
 		property var strokeColor: "#cccccc"
 		property int cropStartX: 0
@@ -38,7 +40,7 @@ QtObject {
 		property int wheelEventCooldown: 50
 		property real lastWheelEvent: 0
 		property bool closeOnGrab: true
-		property var tools: ["pointer", "crop", "eraser", "pen", "ellipse", "rectangle"]
+		property var tools: ["pointer", "crop", "eraser", "pen", "ellipse", "rectangle", "text"]
 		property var currentDecoration: undefined
 		property string savePath: ""
 		property list<var> redoStack: []
@@ -51,9 +53,21 @@ QtObject {
 			QtiCore.quitOnLastWindowClosed = false
 		}
 
-		function switchTool(tool) {
-			colorPicker.owner = undefined
+		function commitSettingsEdits() {
+			if (colorInput.owner) {
+				colorInput.owner = undefined
+				colorInput.callback(colorInput.color_)
+			}
+			if (fontInput.visible) {
+				fontInput.visible = false
+				window.fontFamily = fontInput.fontFamily
+			}
+		}
+
+		function switchTool(tool, ignoreFontInput = false) {
 			window.currentTool = tool
+			colorInput.owner = undefined
+			if (!ignoreFontInput) fontInput.visible = false
 		}
 
 		MouseArea {
@@ -68,12 +82,15 @@ QtObject {
 				if (event.modifiers & Qt.ControlModifier) {
 					const newIndex = (window.tools.indexOf(window.currentTool) + delta + window.tools.length) % window.tools.length
 					window.switchTool(window.tools[newIndex])
+				} else if (window.currentTool === "text") {
+					window.fontSize = Math.max(0, window.fontSize - delta)
 				} else {
 					window.strokeWidth = Math.max(0, window.strokeWidth - delta)
 				}
 			}
 			onPressed: event => {
-				colorPicker.owner = undefined
+				colorInput.owner = undefined
+				fontInput.visible = false
 				window.redoStack = []
 				const scaledX = (event.x - (window.width - image.sourceSize.width * image.scale) / 2) / image.scale
 				const scaledY = (event.y - (window.height - image.sourceSize.height * image.scale) / 2) / image.scale
@@ -91,10 +108,10 @@ QtObject {
 					case "pen":
 					case "ellipse":
 					case "rectangle": {
-						const props = Object.assign({
-							startX: scaledX, startY: scaledY,
-							color: window.fillColor,
-						}, window.currentTool === "pen" ? {} : { x: scaledX, y: scaledY, width: 1, height: 1 })
+						const props = Object.assign(
+							{ startX: scaledX, startY: scaledY, color: window.fillColor },
+							window.currentTool === "pen" ? {} : { x: scaledX, y: scaledY, width: 1, height: 1 }
+						)
 						const component = {
 							pen: penComponent,
 							ellipse: ellipseComponent,
@@ -104,6 +121,12 @@ QtObject {
 						window.currentDecoration.border.color = window.strokeColor
 						window.currentDecoration.border.width = window.strokeWidth
 						break
+					}
+					case "text": {
+						const props = { focus: true, x: scaledX, y: scaledY, color: window.strokeColor }
+						window.currentDecoration = textComponent.createObject(decorationsContainer, props)
+						const fontProps = { family: window.fontFamily, pointSize: window.fontSize }
+						Object.assign(window.currentDecoration.font, fontProps)
 					}
 				}
 			}
@@ -149,8 +172,8 @@ QtObject {
 			Shortcut {
 				sequence: "Escape"
 				onActivated: {
-					if (colorPicker.owner !== undefined) {
-						colorPicker.owner = undefined
+					if (colorInput.owner !== undefined) {
+						colorInput.owner = undefined
 					} else {
 						Qt.quit()
 					}
@@ -297,6 +320,21 @@ QtObject {
 				}
 			}
 
+			Component {
+				id: textComponent
+
+				TextEdit {
+					MouseArea {
+						enabled: window.currentTool === "eraser" && mouseArea.containsPress
+						hoverEnabled: true
+						anchors.fill: parent
+						onPositionChanged: {
+							decorationsContainer.children = decorationsContainer.children.filter(c => c !== parent)
+						}
+					}
+				}
+			}
+
 			Image {
 				id: image
 				source: window.screenshotUrl
@@ -356,15 +394,35 @@ QtObject {
 			IconButton { icon.name: "ellipse"; active: window.currentTool == "ellipse"; onClicked: window.switchTool("ellipse") }
 			IconButton { icon.name: "rectangle"; active: window.currentTool == "rectangle"; onClicked: window.switchTool("rectangle") }
 			CustomButton {
+				id: textButton; width: 32; height: 32; active: window.currentTool == "text"
+				Text {
+					anchors.horizontalCenter: parent.horizontalCenter
+					anchors.verticalCenter: parent.verticalCenter
+					text: "A"; font.family: window.fontFamily; font.pixelSize: 20; font.bold: true
+				}
+				onClicked: {
+					window.switchTool("text", true)
+					if (fontInput.visible) {
+						fontInput.visible = false
+					} else {
+						fontInput.visible = true
+						const coord = mapToGlobal(width / 2, height)
+						fontInput.x = Qt.binding(() => mapToGlobal(width / 2, 0).x - fontInput.width / 2)
+						fontInput.y = mapToGlobal(0, height).y
+						fontInput.fontFamily = window.fontFamily
+					}
+				}
+			}
+			CustomButton {
 				width: 32; height: 32
 				onClicked: {
-					colorPicker.owner = colorPicker.owner === "stroke" ? undefined : "stroke"
-					if (colorPicker.owner !== "stroke") return
+					colorInput.owner = colorInput.owner === "stroke" ? undefined : "stroke"
+					if (colorInput.owner !== "stroke") return
 					const coord = mapToGlobal(width / 2, height)
-					colorPicker.x = Qt.binding(() => coord.x - colorPicker.width / 2)
-					colorPicker.y = coord.y
-					colorPicker.color_ = window.strokeColor
-					colorPicker.callback = color => { window.strokeColor = color }
+					colorInput.x = Qt.binding(() => mapToGlobal(width / 2, 0).x - colorInput.width / 2)
+					colorInput.y = mapToGlobal(0, height).y
+					colorInput.color_ = window.strokeColor
+					colorInput.callback = color => { window.strokeColor = color }
 				}
 
 				Rectangle {
@@ -378,13 +436,13 @@ QtObject {
 			CustomButton {
 				width: 32; height: 32
 				onClicked: {
-					colorPicker.owner = colorPicker.owner === "fill" ? undefined : "fill"
-					if (colorPicker.owner !== "fill") return
+					colorInput.owner = colorInput.owner === "fill" ? undefined : "fill"
+					if (colorInput.owner !== "fill") return
 					const coord = mapToGlobal(width / 2, height)
-					colorPicker.x = Qt.binding(() => coord.x - colorPicker.width / 2)
-					colorPicker.y = coord.y
-					colorPicker.color_ = window.fillColor
-					colorPicker.color_PickedCallback = color => { window.fillColor = color }
+					colorInput.x = Qt.binding(() => coord.x - colorInput.width / 2)
+					colorInput.y = coord.y
+					colorInput.color_ = window.fillColor
+					colorInput.color_PickedCallback = color => { window.fillColor = color }
 				}
 
 				Rectangle {
@@ -398,35 +456,74 @@ QtObject {
 		}
 
 		Rectangle {
-			id: colorPicker
-			property string color_
-			property var owner
-			property var callback
+			visible: false
+			id: fontInput
+			property string fontFamily
 			color: "transparent"
-			visible: colorPicker.owner !== undefined
-			width: colorPickerLayout.implicitWidth + Theme.panel.margin * 2
-			height: colorPickerLayout.implicitHeight + Theme.panel.margin * 2
+			width: fontInputLayout.implicitWidth + Theme.panel.margin * 2
+			height: fontInputLayout.implicitHeight + Theme.panel.margin * 2
+
+			MouseArea { anchors.fill: parent }
+
 			Rectangle {
 				anchors.fill: parent
 				anchors.margins: Theme.panel.margin
 				radius: Theme.panel.radius
 				color: Theme.panel.backgroundColor
 				ColumnLayout {
-					id: colorPickerLayout
+					id: fontInputLayout
 
 					TextInput {
 						Layout.alignment: Qt.AlignHCenter
-						text: colorPicker.color_
+						text: fontInput.fontFamily
 						color: Theme.foregroundColor
-						onTextEdited: colorPicker.color_ = text
-						onAccepted: colorPicker.callback(colorPicker.color_)
+						onTextEdited: fontInput.fontFamily = text
+						onAccepted: window.fontFamily = fontInput.fontFamily
+					}
+
+					Text {
+						Layout.alignment: Qt.AlignHCenter
+						text: "AaBbCc"
+						font.family: fontInput.fontFamily
+						font.pointSize: window.fontSize
+					}
+				}
+			}
+		}
+
+		Rectangle {
+			id: colorInput
+			property string color_
+			property var owner
+			property var callback
+			color: "transparent"
+			visible: colorInput.owner !== undefined
+			width: colorInputLayout.implicitWidth + Theme.panel.margin * 2
+			height: colorInputLayout.implicitHeight + Theme.panel.margin * 2
+
+			MouseArea { anchors.fill: parent }
+
+			Rectangle {
+				anchors.fill: parent
+				anchors.margins: Theme.panel.margin
+				radius: Theme.panel.radius
+				color: Theme.panel.backgroundColor
+				ColumnLayout {
+					id: colorInputLayout
+
+					TextInput {
+						Layout.alignment: Qt.AlignHCenter
+						text: colorInput.color_
+						color: Theme.foregroundColor
+						onTextEdited: colorInput.color_ = text
+						onAccepted: colorInput.callback(colorInput.color_)
 					}
 
 					Rectangle {
 						Layout.alignment: Qt.AlignHCenter
 						width: 24
 						height: 24
-						color: colorPicker.color_
+						color: colorInput.color_
 						border.color: "white"
 						border.width: 1
 						radius: Theme.button.radius
