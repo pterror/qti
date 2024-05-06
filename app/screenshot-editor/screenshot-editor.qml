@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
+import QtQuick.Dialogs
 import Qti.Core
 import Qti.Screenshot
 import Qti.Clipboard
@@ -10,12 +11,12 @@ import "../_library"
 // TODO: actually implement eraser
 QtObject {
 	id: realRoot
-	property real closeOnCopyDate: 0
+	property real windowCloseDate: 0
 
 	property Connections copyDetection: Connections {
 		target: Clipboard
 		function onChanged(mode) {
-			if (closeOnCopyDate === 0 || Number(new Date()) < closeOnCopyDate || mode !== Clipboard.Global) return
+			if (windowCloseDate === 0 || Number(new Date()) < windowCloseDate || mode !== Clipboard.Global) return
 			Qt.quit()
 		}
 	}
@@ -26,20 +27,20 @@ QtObject {
 		property url screenshotUrl: ""
 		property string currentTool: "crop"
 		property var fillColor: "#00000000"
-		property var strokeColor: "#80ffffff"
-		property bool copying: false
+		property var strokeColor: "#cccccc"
 		property int cropStartX: 0
 		property int cropStartY: 0
 		property int cropX: 0
 		property int cropY: 0
-		property int cropWidth: window.width
-		property int cropHeight: window.height
+		property int cropWidth: image.sourceSize.width || window.width
+		property int cropHeight: image.sourceSize.height || window.height
 		property int strokeWidth: 4
 		property int wheelEventCooldown: 50
 		property real lastWheelEvent: 0
-		property bool daemonizeOnCopy: true
+		property bool closeOnGrab: true
 		property var tools: ["pointer", "crop", "eraser", "pen", "ellipse", "rectangle"]
 		property var currentDecoration: undefined
+		property string savePath: ""
 		property list<var> redoStack: []
 		Component.onCompleted: {
 			Screenshot.capture(
@@ -141,7 +142,9 @@ QtObject {
 
 		Item {
 			id: root
-			anchors.fill: parent
+			property bool grabbing: false
+			width: !window ? 0 : grabbing ? window.cropWidth : parent.width
+			height: !window ? 0 : grabbing ? window.cropHeight : parent.height
 
 			Shortcut {
 				sequence: "Escape"
@@ -175,36 +178,35 @@ QtObject {
 				}
 			}
 
+			function grab(callback) {
+				root.grabbing = true
+				root.grabToImage(result => {
+					root.grabbing = false
+					callback(result)
+					if (window.closeOnGrab) {
+						Screenshot.free(window.screenshotUrl)
+						windowCloseDate = Number(new Date()) + 50
+						window.close()
+						QtiCore?.deleteLater(window)
+					}
+				})
+			}
+
 			Shortcut {
 				sequence: "Ctrl+C"
-				onActivated: {
-					const oldWidth = window.width
-					const oldHeight = window.height
-					window.width = image.sourceSize.width
-					window.height = image.sourceSize.height
-					window.copying = true
-					image.grabToImage(result => {
-						window.copying = false
-						let qImage = result.image
-						if (
-							window.cropX !== 0 || window.cropY !== 0 ||
-							window.cropWidth !== image.sourceSize.width || window.cropHeight !== image.sourceSize.height
-						) {
-							const cropRect = Qt.rect(window.cropX, window.cropY, window.cropWidth, window.cropHeight)
-							qImage = QtiCore.copyImage(qImage, cropRect)
-						}
-						Clipboard.setImage(qImage)
-						Screenshot.free(window.screenshotUrl)
-						if (window.daemonizeOnCopy) {
-							closeOnCopyDate = Number(new Date()) + 50
-							window.close()
-							QtiCore.deleteLater(window)
-						} else {
-							window.width = oldWidth
-							window.height = oldHeight
-						}
-					})
-				}
+				onActivated: root.grab(result => { Clipboard.setImage(result.image) })
+			}
+
+			Shortcut { sequence: "Ctrl+S"; onActivated: saveDialog.open() }
+
+			FileDialog {
+				id: saveDialog
+				fileMode: FileDialog.SaveFile
+				defaultSuffix: "png"
+				onAccepted: root.grab(result => {
+					result.saveToFile(selectedFile)
+					if (window.closeOnGrab) Qt.quit()
+				})
 			}
 
 			Component { id: pathLineComponent; PathLine {} }
@@ -224,6 +226,8 @@ QtObject {
 						strokeWidth: shape.border.width
 						strokeColor: shape.border.color
 						fillColor: shape.color
+						capStyle: ShapePath.RoundCap
+						joinStyle: ShapePath.RoundJoin
 					}
 
 					MouseArea {
@@ -296,12 +300,12 @@ QtObject {
 			Image {
 				id: image
 				source: window.screenshotUrl
-				scale: Math.min(
+				scale: root.grabbing ? 1 : Math.min(
 					window.width / (image.sourceSize.width || window.width),
 					window.height / (image.sourceSize.height || window.height)
 				)
-				x: !window ? 0 : (window.width - image.sourceSize.width) / 2
-				y: !window ? 0 : (window.height - image.sourceSize.height) / 2
+				x: !window ? 0 : root.grabbing ? -window.cropX : (window.width - image.sourceSize.width) / 2
+				y: !window ? 0 : root.grabbing ? -window.cropY : (window.height - image.sourceSize.height) / 2
 
 				Item {
 					id: decorationsContainer
@@ -309,22 +313,22 @@ QtObject {
 				}
 
 				Rectangle {
-					visible: !window.copying
+					visible: !root.grabbing
 					color: Theme.maskColor
-					width: window?.width ?? 0
+					width: image.sourceSize.width
 					height: window?.cropY ?? 0
 				}
 
 				Rectangle {
-					visible: !window.copying
+					visible: !root.grabbing
 					color: Theme.maskColor
 					y: window?.cropY + window?.cropHeight
-					width: window?.width ?? 0
-					height: window?.height - window?.cropY - window?.cropHeight
+					width: image.sourceSize.width
+					height: image.sourceSize.height - window?.cropY - window?.cropHeight
 				}
 
 				Rectangle {
-					visible: !window.copying
+					visible: !root.grabbing
 					color: Theme.maskColor
 					y: window?.cropY ?? 0
 					width: window?.cropX ?? 0
@@ -332,11 +336,11 @@ QtObject {
 				}
 
 				Rectangle {
-					visible: !window.copying
+					visible: !root.grabbing
 					color: Theme.maskColor
 					x: window?.cropX + window?.cropWidth
 					y: window?.cropY ?? 0
-					width: window?.width - window?.cropWidth
+					width: image.sourceSize.width - window?.cropWidth
 					height: window?.cropHeight ?? 0
 				}
 			}
