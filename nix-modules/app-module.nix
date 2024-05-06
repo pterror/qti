@@ -1,12 +1,7 @@
 { lib
 , pkgs
-, keepDebugInfo
-, buildStdenv ? pkgs.clang17Stdenv
-, cmake
-, ninja
+, stdenv
 , qt6
-, wayland
-, wayland-protocols
 , gitRev ? (
     let
       headExists = builtins.pathExists ./.git/HEAD;
@@ -25,7 +20,7 @@
     else "unknown"
   )
 , isStdlib ? false
-}: args: buildStdenv.mkDerivation (args // rec {
+}: args: stdenv.mkDerivation (args // rec {
   pname = "qti-app-${args.pname}";
   src = ../app + "/${args.pname}";
   version = args.version or " 0.0 .1 ";
@@ -33,10 +28,16 @@
     if isStdlib then [ ] else [
       (pkgs.callPackage ./qti-app-stdlib.nix { })
     ];
-  installPhase = ''
-    mkdir -p $out/share/qti/${args.pname}
-    mv * $out/share/qti/${args.pname}
-  '';
+  installPhase =
+    if isStdlib then
+      ''
+        mkdir -p $out/${qt6.qtbase.qtQmlPrefix}/Qti/Stdlib
+        mv * $out/${qt6.qtbase.qtQmlPrefix}/Qti/Stdlib
+      '' else
+      ''
+        mkdir -p $out/share/qti/${args.pname}
+        mv * $out/share/qti/${args.pname}
+      '';
   meta = with lib; {
     homepage = "https://github.com/pterror/qti/tree/master/app/${args.pname}";
     description = "Qt interpreter";

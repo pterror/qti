@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt.labs.qmlmodels
 import Qti.Sql
-import "../stdlib"
+import Qti.Stdlib
 
 QtiWindow {
 	id: window

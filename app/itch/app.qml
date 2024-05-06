@@ -1,4 +1,4 @@
-import "../stdlib"
+import Qti.Stdlib
 
 QtiWindow {
 	id: window

@@ -5,7 +5,7 @@ import QtQuick.Dialogs
 import Qti.Core
 import Qti.Screenshot
 import Qti.Clipboard
-import "../stdlib"
+import Qti.Stdlib
 
 // TODO: show decorations in a list
 // TODO: actually implement eraser

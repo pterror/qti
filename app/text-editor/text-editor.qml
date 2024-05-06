@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import QtQuick.Dialogs
 import Qti.Filesystem
-import "../stdlib"
+import Qti.Stdlib
 
 // TODO: https://doc.qt.io/qt-6/qfilesystemwatcher.html#fileChanged
 // > As a safety measure, many applications save an open file by writing a new file
