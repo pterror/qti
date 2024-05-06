@@ -31,8 +31,8 @@ QtObject {
 		property int cropStartY: 0
 		property int cropX: 0
 		property int cropY: 0
-		property int cropWidth: image.implicitWidth
-		property int cropHeight: image.implicitHeight
+		property int cropWidth: window.width
+		property int cropHeight: window.height
 		property int strokeWidth: 4
 		property int wheelEventCooldown: 50
 		property real lastWheelEvent: 0
