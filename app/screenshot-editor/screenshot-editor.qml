@@ -27,6 +27,7 @@ QtObject {
 		property string currentTool: "crop"
 		property var fillColor: "#00000000"
 		property var strokeColor: "#80ffffff"
+		property bool copying: false
 		property int cropStartX: 0
 		property int cropStartY: 0
 		property int cropX: 0
@@ -73,11 +74,14 @@ QtObject {
 			onPressed: event => {
 				colorPicker.owner = undefined
 				window.redoStack = []
+				const scaledX = (event.x - (window.width - image.sourceSize.width * image.scale) / 2) / image.scale
+				const scaledY = (event.y - (window.height - image.sourceSize.height * image.scale) / 2) / image.scale
+				y: !window ? 0 : (window.height - image.sourceSize.height) / 2
 				switch (window.currentTool) {
 					case "crop": {
-						window.cropX = event.x
+						window.cropX = scaledX
 						window.cropStartX = window.cropX
-						window.cropY = event.y
+						window.cropY = scaledY
 						window.cropStartY = window.cropY
 						window.cropWidth = 0
 						window.cropHeight = 0
@@ -87,9 +91,9 @@ QtObject {
 					case "ellipse":
 					case "rectangle": {
 						const props = Object.assign({
-							startX: event.x, startY: event.y,
+							startX: scaledX, startY: scaledY,
 							color: window.fillColor,
-						}, window.currentTool === "pen" ? {} : { x: event.x, y: event.y, width: 1, height: 1 })
+						}, window.currentTool === "pen" ? {} : { x: scaledX, y: scaledY, width: 1, height: 1 })
 						const component = {
 							pen: penComponent,
 							ellipse: ellipseComponent,
@@ -107,26 +111,28 @@ QtObject {
 			}
 			onPositionChanged: event => {
 				if (!containsPress) return
+				const scaledX = (event.x - (window.width - image.sourceSize.width * image.scale) / 2) / image.scale
+				const scaledY = (event.y - (window.height - image.sourceSize.height * image.scale) / 2) / image.scale
 				switch (window.currentTool) {
 					case "crop": {
-						window.cropX = Math.min(event.x, window.cropStartX)
-						window.cropY = Math.min(event.y, window.cropStartY)
-						window.cropWidth = Math.abs(event.x - window.cropStartX)
-						window.cropHeight = Math.abs(event.y - window.cropStartY)
+						window.cropX = Math.min(scaledX, window.cropStartX)
+						window.cropY = Math.min(scaledY, window.cropStartY)
+						window.cropWidth = Math.abs(scaledX - window.cropStartX)
+						window.cropHeight = Math.abs(scaledY - window.cropStartY)
 						break
 					}
 					case "pen": {
 						if (!window.currentDecoration) return
-						window.currentDecoration.lineTo(event.x, event.y)
+						window.currentDecoration.lineTo(scaledX, scaledY)
 						break
 					}
 					case "ellipse":
 					case "rectangle": {
 						if (!window.currentDecoration) return
-						window.currentDecoration.x = Math.min(event.x, window.currentDecoration.startX)
-						window.currentDecoration.y = Math.min(event.y, window.currentDecoration.startY)
-						window.currentDecoration.width = Math.abs(event.x - window.currentDecoration.startX)
-						window.currentDecoration.height = Math.abs(event.y - window.currentDecoration.startY)
+						window.currentDecoration.x = Math.min(scaledX, window.currentDecoration.startX)
+						window.currentDecoration.y = Math.min(scaledY, window.currentDecoration.startY)
+						window.currentDecoration.width = Math.abs(scaledX - window.currentDecoration.startX)
+						window.currentDecoration.height = Math.abs(scaledY - window.currentDecoration.startY)
 						break
 					}
 				}
@@ -172,21 +178,30 @@ QtObject {
 			Shortcut {
 				sequence: "Ctrl+C"
 				onActivated: {
-					root.grabToImage(result => {
-						let image = result.image
+					const oldWidth = window.width
+					const oldHeight = window.height
+					window.width = image.sourceSize.width
+					window.height = image.sourceSize.height
+					window.copying = true
+					image.grabToImage(result => {
+						window.copying = false
+						let qImage = result.image
 						if (
 							window.cropX !== 0 || window.cropY !== 0 ||
-							window.cropWidth !== image.implicitWidth || window.cropHeight !== image.implicitHeight
+							window.cropWidth !== image.sourceSize.width || window.cropHeight !== image.sourceSize.height
 						) {
 							const cropRect = Qt.rect(window.cropX, window.cropY, window.cropWidth, window.cropHeight)
-							image = QtiCore.copyImage(image, cropRect)
+							qImage = QtiCore.copyImage(qImage, cropRect)
 						}
-						Clipboard.setImage(image)
+						Clipboard.setImage(qImage)
 						Screenshot.free(window.screenshotUrl)
 						if (window.daemonizeOnCopy) {
 							closeOnCopyDate = Number(new Date()) + 50
 							window.close()
 							QtiCore.deleteLater(window)
+						} else {
+							window.width = oldWidth
+							window.height = oldHeight
 						}
 					})
 				}
@@ -280,43 +295,51 @@ QtObject {
 
 			Image {
 				id: image
-				anchors.fill: parent
-				fillMode: Image.PreserveAspectFit
 				source: window.screenshotUrl
+				scale: Math.min(
+					window.width / (image.sourceSize.width || window.width),
+					window.height / (image.sourceSize.height || window.height)
+				)
+				x: !window ? 0 : (window.width - image.sourceSize.width) / 2
+				y: !window ? 0 : (window.height - image.sourceSize.height) / 2
+
+				Item {
+					id: decorationsContainer
+					anchors.fill: parent
+				}
+
+				Rectangle {
+					visible: !window.copying
+					color: Theme.maskColor
+					width: window?.width ?? 0
+					height: window?.cropY ?? 0
+				}
+
+				Rectangle {
+					visible: !window.copying
+					color: Theme.maskColor
+					y: window?.cropY + window?.cropHeight
+					width: window?.width ?? 0
+					height: window?.height - window?.cropY - window?.cropHeight
+				}
+
+				Rectangle {
+					visible: !window.copying
+					color: Theme.maskColor
+					y: window?.cropY ?? 0
+					width: window?.cropX ?? 0
+					height: window?.cropHeight
+				}
+
+				Rectangle {
+					visible: !window.copying
+					color: Theme.maskColor
+					x: window?.cropX + window?.cropWidth
+					y: window?.cropY ?? 0
+					width: window?.width - window?.cropWidth
+					height: window?.cropHeight ?? 0
+				}
 			}
-
-			Item {
-				id: decorationsContainer
-				anchors.fill: parent
-			}
-		}
-
-		Rectangle {
-			color: Theme.maskColor
-			width: window?.width ?? 0
-			height: window?.cropY ?? 0
-		}
-
-		Rectangle {
-			color: Theme.maskColor
-			y: window?.cropY + window?.cropHeight
-			width: window?.width ?? 0
-			height: window?.height - window?.cropY - window?.cropHeight
-		}
-
-		Rectangle {
-			color: Theme.maskColor
-			y: window?.cropY ?? 0
-			width: window?.cropX ?? 0
-			height: window?.cropHeight
-		}
-
-		Rectangle {
-			color: Theme.maskColor
-			x: window?.cropX + window?.cropWidth
-			y: window?.cropY ?? 0
-			width: window?.width - window?.cropWidth
-			height: window?.cropHeight ?? 0
 		}
 
 		RowLayout {
