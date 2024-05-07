@@ -20,7 +20,6 @@ public:
   [[nodiscard]] bool quitOnLastWindowClosed();
   void setQuitOnLastWindowClosed(bool quit);
 
-  Q_INVOKABLE static void deleteLater(QObject *object);
   Q_INVOKABLE [[nodiscard]] static QImage copyImage(const QImage &image,
                                                     const QRect &rect);
   Q_INVOKABLE [[nodiscard]] static QPixmap copyPixmap(const QPixmap &pixmap,

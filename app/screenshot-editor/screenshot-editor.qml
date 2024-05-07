@@ -209,8 +209,7 @@ QtObject {
 					if (window.closeOnGrab) {
 						Screenshot.free(window.screenshotUrl)
 						windowCloseDate = Number(new Date()) + 50
-						window.close()
-						QtiCore?.deleteLater(window)
+						window.destroy()
 					}
 				})
 			}
@@ -353,33 +352,33 @@ QtObject {
 				Rectangle {
 					visible: !root.grabbing
 					color: Theme.maskColor
-					width: image.sourceSize.width
-					height: window?.cropY ?? 0
+					width: !window ? 0 : image.sourceSize.width
+					height: !window ? 0 : window.cropY
 				}
 
 				Rectangle {
 					visible: !root.grabbing
 					color: Theme.maskColor
-					y: window?.cropY + window?.cropHeight
-					width: image.sourceSize.width
-					height: image.sourceSize.height - window?.cropY - window?.cropHeight
+					y: !window ? 0 : window.cropY + window.cropHeight
+					width: !window ? 0 : image.sourceSize.width
+					height: !window ? 0 : image.sourceSize.height - window?.cropY - window?.cropHeight
 				}
 
 				Rectangle {
 					visible: !root.grabbing
 					color: Theme.maskColor
-					y: window?.cropY ?? 0
-					width: window?.cropX ?? 0
-					height: window?.cropHeight
+					y: !window ? 0 : window.cropY
+					width: !window ? 0 : window.cropX
+					height: !window ? 0 : window.cropHeight
 				}
 
 				Rectangle {
 					visible: !root.grabbing
 					color: Theme.maskColor
-					x: window?.cropX + window?.cropWidth
-					y: window?.cropY ?? 0
-					width: image.sourceSize.width - window?.cropWidth
-					height: window?.cropHeight ?? 0
+					x: !window ? 0 : window.cropX + window.cropWidth
+					y: !window ? 0 : window.cropY
+					width: !window ? 0 : image.sourceSize.width - window.cropWidth
+					height: !window ? 0 : window.cropHeight
 				}
 			}
 		}

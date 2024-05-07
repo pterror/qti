@@ -11,8 +11,6 @@ void Core::setQuitOnLastWindowClosed(bool quit) { // NOLINT
   emit this->quitOnLastWindowClosedChanged();
 }
 
-void Core::deleteLater(QObject *object) { object->deleteLater(); }
-
 QImage Core::copyImage(const QImage &image, const QRect &rect) {
   return image.copy(rect);
 }
