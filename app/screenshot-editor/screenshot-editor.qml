@@ -166,14 +166,16 @@ QtObject {
 		Item {
 			id: root
 			property bool grabbing: false
+			focus: colorInput.owner === undefined && !fontInput.visible
 			width: !window ? 0 : grabbing ? window.cropWidth : parent.width
 			height: !window ? 0 : grabbing ? window.cropHeight : parent.height
 
 			Shortcut {
 				sequence: "Escape"
 				onActivated: {
-					if (colorInput.owner !== undefined) {
+					if (colorInput.owner !== undefined || fontInput.visible) {
 						colorInput.owner = undefined
+						fontInput.visible = false
 					} else {
 						Qt.quit()
 					}
@@ -405,9 +407,8 @@ QtObject {
 						fontInput.visible = false
 					} else {
 						fontInput.visible = true
-						const coord = mapToGlobal(width / 2, height)
-						fontInput.x = Qt.binding(() => mapToGlobal(width / 2, 0).x - fontInput.width / 2)
-						fontInput.y = mapToGlobal(0, height).y
+						fontInput.x = Qt.binding(() => !root ? 0 : mapToItem(root, width / 2, 0).x - fontInput.width / 2)
+						fontInput.y = mapToItem(root, 0, height).y
 						fontInput.fontFamily = window.fontFamily
 					}
 				}
@@ -417,9 +418,8 @@ QtObject {
 				onClicked: {
 					colorInput.owner = colorInput.owner === "stroke" ? undefined : "stroke"
 					if (colorInput.owner !== "stroke") return
-					const coord = mapToGlobal(width / 2, height)
-					colorInput.x = Qt.binding(() => mapToGlobal(width / 2, 0).x - colorInput.width / 2)
-					colorInput.y = mapToGlobal(0, height).y
+					colorInput.x = Qt.binding(() => !root ? 0 : mapToItem(root, width / 2, 0).x - colorInput.width / 2)
+					colorInput.y = mapToItem(root, 0, height).y
 					colorInput.color_ = window.strokeColor
 					colorInput.callback = color => { window.strokeColor = color }
 				}
@@ -437,11 +437,11 @@ QtObject {
 				onClicked: {
 					colorInput.owner = colorInput.owner === "fill" ? undefined : "fill"
 					if (colorInput.owner !== "fill") return
-					const coord = mapToGlobal(width / 2, height)
+					const coord = mapToItem(root, width / 2, height)
 					colorInput.x = Qt.binding(() => coord.x - colorInput.width / 2)
 					colorInput.y = coord.y
 					colorInput.color_ = window.fillColor
-					colorInput.color_PickedCallback = color => { window.fillColor = color }
+					colorInput.callback = color => { window.fillColor = color }
 				}
 
 				Rectangle {
@@ -461,6 +461,7 @@ QtObject {
 			color: "transparent"
 			width: fontInputLayout.implicitWidth + Theme.panel.margin * 2
 			height: fontInputLayout.implicitHeight + Theme.panel.margin * 2
+			onVisibleChanged: if (visible) fontTextInput.focus = true
 
 			MouseArea { anchors.fill: parent }
 
@@ -473,11 +474,15 @@ QtObject {
 					id: fontInputLayout
 
 					TextInput {
+						id: fontTextInput
 						Layout.alignment: Qt.AlignHCenter
 						text: fontInput.fontFamily
 						color: Theme.foregroundColor
 						onTextEdited: fontInput.fontFamily = text
-						onAccepted: window.fontFamily = fontInput.fontFamily
+						onAccepted: {
+							window.fontFamily = fontInput.fontFamily
+							fontInput.visible = false
+						}
 					}
 
 					Text {
@@ -496,9 +501,10 @@ QtObject {
 			property var owner
 			property var callback
 			color: "transparent"
-			visible: colorInput.owner !== undefined
+			visible: owner !== undefined
 			width: colorInputLayout.implicitWidth + Theme.panel.margin * 2
 			height: colorInputLayout.implicitHeight + Theme.panel.margin * 2
+			onVisibleChanged: if (visible) colorTextInput.focus = true
 
 			MouseArea { anchors.fill: parent }
 
@@ -511,11 +517,15 @@ QtObject {
 					id: colorInputLayout
 
 					TextInput {
+						id: colorTextInput
 						Layout.alignment: Qt.AlignHCenter
 						text: colorInput.color_
 						color: Theme.foregroundColor
 						onTextEdited: colorInput.color_ = text
-						onAccepted: colorInput.callback(colorInput.color_)
+						onAccepted: {
+							colorInput.callback(colorInput.color_)
+							colorInput.owner = undefined
+						}
 					}
 
 					Rectangle {
