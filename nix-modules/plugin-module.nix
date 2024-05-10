@@ -52,7 +52,7 @@
       cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
       cmakeConfigurePhase
     '';
-  qmlOutputSubdir = "/qml";
+  qmlOutputSubdir = "/qml/";
   cmakeFlags = [
     "-DINSTALL_PLUGINSDIR=${qt6.qtbase.qtPluginPrefix}"
     "-DINSTALL_QMLDIR=${qt6.qtbase.qtQmlPrefix}"
