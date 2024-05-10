@@ -37,6 +37,7 @@ mkShell {
 
     # qmlls does not account for the import path and bases its search off qtbase's path.
     # The actual imports come from qtdeclarative. This directs qmlls to the correct imports.
-    export QMLLS_BUILD_DIRS=$(pwd)/build:$QML2_IMPORT_PATH
+    export QML2_IMPORT_PATH=$(pwd)/build:$QML2_IMPORT_PATH
+    export QMLLS_BUILD_DIRS=$QML2_IMPORT_PATH
   '';
 }

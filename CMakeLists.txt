@@ -9,6 +9,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(WAYLAND "Enable Wayland support" ON)
+option(PLUGIN_STDLIB "Include Stdlib plugin" ON)
+option(PLUGIN_CORE "Include Core plugin" ON)
+option(PLUGIN_SCREENSHOT "Include Screenshot plugin" ON)
+option(PLUGIN_CLIPBOARD "Include Clipboard plugin" ON)
 
 # nix workaround
 if (CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -21,3 +25,19 @@ qt_standard_project_setup()
 qt_add_executable(qti src/main.cpp)
 install(TARGETS qti)
 target_link_libraries(qti PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::WaylandClient Qt6::WaylandClientPrivate)
+
+if (PLUGIN_CORE)
+    add_subdirectory(plugin/core)
+endif()
+
+if (PLUGIN_SCREENSHOT)
+    add_subdirectory(plugin/screenshot)
+endif()
+
+if (PLUGIN_CLIPBOARD)
+    add_subdirectory(plugin/clipboard)
+endif()
+
+if (PLUGIN_STDLIB)
+    add_subdirectory(plugin/stdlib)
+endif()

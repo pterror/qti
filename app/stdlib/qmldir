@@ -1,7 +1,0 @@
-module Qti.Stdlib
-singleton Theme 1.0 Theme.qml
-QtiWindow 1.0 QtiWindow.qml
-Text 1.0 Text.qml
-TextButton 1.0 TextButton.qml
-IconButton 1.0 IconButton.qml
-CustomButton 1.0 CustomButton.qml

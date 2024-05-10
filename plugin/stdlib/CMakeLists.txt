@@ -1,6 +1,6 @@
 # https://doc.qt.io/qt-6/cmake-build-reusable-qml-module.html
 cmake_minimum_required(VERSION 3.19)
-project(QtiScreenshot VERSION "0.0.1")
+project(QtiStdlib VERSION "0.0.1")
 
 set(QT_MIN_VERSION "6.6.0")
 set(CMAKE_CXX_STANDARD 20)
@@ -16,14 +16,10 @@ add_compile_options(-Wall -Wextra)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Qml)
 
-if (DEFINED ENV{QTWAYLANDSCANNER})
-    set(qtwaylandscanner $ENV{QTWAYLANDSCANNER})
-endif()
-
 if(QT_KNOWN_POLICY_QTP0001)
     qt_policy(SET QTP0001 NEW)
 endif()
 
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 qt_standard_project_setup()
-add_subdirectory(src/Qti/Screenshot)
+add_subdirectory(src/Qti/Stdlib)
