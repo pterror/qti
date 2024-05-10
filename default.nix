@@ -54,7 +54,13 @@
       cmakeBuildType=${cmakeBuildType} # qt6 setup hook resets this for some godforsaken reason
       cmakeConfigurePhase
     '';
-  cmakeFlags = [ "-DGIT_REVISION=${gitRev}" ];
+  cmakeFlags = [
+    "-DPLUGIN_STDLIB=OFF"
+    "-DPLUGIN_CORE=OFF"
+    "-DPLUGIN_SCREENSHOT=OFF"
+    "-DPLUGIN_CLIPBOARD=OFF"
+    "-DGIT_REVISION=${gitRev}"
+  ];
   buildPhase = "ninjaBuildPhase";
   enableParallelBuilding = true;
   dontStrip = true;

@@ -25,9 +25,9 @@
   src = ../app + "/${args.pname}";
   version = args.version or " 0.0 .1 ";
   buildInputs =
-    if isStdlib then [ ] else [
-      (pkgs.callPackage ./qti-app-stdlib.nix { })
-    ];
+    (args.buildInputs or [ ]) ++ (if isStdlib then [ ] else [
+      (pkgs.callPackage ./qti-plugin-stdlib.nix { })
+    ]);
   installPhase =
     if isStdlib then
       ''
