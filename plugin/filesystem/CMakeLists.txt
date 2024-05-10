@@ -22,4 +22,4 @@ endif()
 
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 qt_standard_project_setup()
-add_subdirectory(src/Qti/Filesystem)
+add_subdirectory(src)
