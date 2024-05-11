@@ -55,10 +55,7 @@
       cmakeConfigurePhase
     '';
   cmakeFlags = [
-    "-DPLUGIN_STDLIB=OFF"
-    "-DPLUGIN_CORE=OFF"
-    "-DPLUGIN_SCREENSHOT=OFF"
-    "-DPLUGIN_CLIPBOARD=OFF"
+    "-DPLUGINS=OFF"
     "-DGIT_REVISION=${gitRev}"
   ];
   buildPhase = "ninjaBuildPhase";

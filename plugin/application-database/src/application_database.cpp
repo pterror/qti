@@ -3,6 +3,15 @@
 #include <QDir>
 #include <QFile>
 #include <QRegularExpression>
+#include <qiodevicebase.h>
+
+enum class SectionType { DesktopEntry, DesktopAction };
+
+bool ApplicationDesktopAction::operator==(
+    const ApplicationDesktopAction &other) const {
+  return this->id == other.id && this->name == other.name &&
+         this->exec == other.exec;
+}
 
 QList<ApplicationInfo> ApplicationDatabase::applications() {
   if (!this->mInitialized) {
@@ -71,127 +80,143 @@ void ApplicationDatabase::initialize() {
   if (this->mInitialized) {
     return;
   }
+  this->mInitialized = true;
   auto xdgDataDirs = QString(qgetenv("XDG_DATA_DIRS"));
   if (xdgDataDirs.isEmpty()) {
-    xdgDataDirs = "/usr/share/applications";
+    xdgDataDirs = "/usr/share";
   }
   for (const auto &dirPath : xdgDataDirs.split(':')) {
-    const auto dir = QDir(dirPath);
-    if (!dir.exists()) {
-      continue;
-    }
-    for (const auto &filePath : dir.entryList(QDir::Files)) {
-      auto file = QFile(filePath);
-      auto section = SectionType::DesktopEntry;
-      auto info = ApplicationInfo();
-      auto action = ApplicationDesktopAction();
-      auto match = QRegularExpressionMatch();
-      while (!file.atEnd()) {
-        const auto line = QString(file.readLine());
-        if (line.startsWith("[")) {
-          if (line == "[Desktop Entry]") {
-            section = SectionType::DesktopEntry;
-          } else if (line.contains(DESKTOP_ACTION_REG_EXP, &match)) {
-            section = SectionType::DesktopAction;
-            // TODO: fix this if `name` and `exec` are not being set
-            action = info.actions.emplace_back(ApplicationDesktopAction());
-            action.id = match.captured(1);
+    this->scanDir(dirPath + "/applications");
+  }
+  // do not `emit this->applicationsChanged()` here because this may be
+  // triggered by accessing `applications`
+}
+
+void ApplicationDatabase::scanDir(const QString &dirPath) {
+  const auto dir = QDir(dirPath);
+  if (!dir.exists()) {
+    return;
+  }
+  for (const auto &childDirPath :
+       dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+    this->scanDir(dirPath + "/" + childDirPath);
+  }
+  for (const auto &filePath : dir.entryList(QDir::Files)) {
+    this->scanFile(dirPath + "/" + filePath);
+  }
+}
+
+void ApplicationDatabase::scanFile(const QString &filePath) {
+  auto file = QFile(filePath);
+  if (!file.exists()) {
+    return;
+  }
+  auto section = SectionType::DesktopEntry;
+  auto info = ApplicationInfo();
+  auto action = ApplicationDesktopAction();
+  auto match = QRegularExpressionMatch();
+  file.open(QIODeviceBase::ReadOnly);
+  while (!file.atEnd()) {
+    const auto line = QString(file.readLine()).replace('\n', "");
+    if (line.startsWith("[")) {
+      if (line == "[Desktop Entry]") {
+        section = SectionType::DesktopEntry;
+      } else if (line.contains(DESKTOP_ACTION_REG_EXP, &match)) {
+        section = SectionType::DesktopAction;
+        // TODO: fix this if `name` and `exec` are not being set
+        action = info.actions.emplace_back(ApplicationDesktopAction());
+        action.id = match.captured(1);
+      }
+    } else if (section == SectionType::DesktopEntry) {
+      const auto parts = line.split('=');
+      const auto &key = parts[0];
+      const auto value = parts.length() < 2    ? QString()
+                         : parts.length() == 2 ? parts[1]
+                                               : parts.sliced(1).join('=');
+      auto keyType = NAME_TO_APPLICATION_INFO_PROPERTY.constFind(key);
+      if (keyType != NAME_TO_APPLICATION_INFO_PROPERTY.constEnd()) {
+        switch (keyType.value()) {
+        case ApplicationInfoProperty::Exec: {
+          info.exec = value;
+          break;
+        }
+        case ApplicationInfoProperty::Type: {
+          info.type = value;
+          break;
+        }
+        case ApplicationInfoProperty::Icon: {
+          info.icon = value;
+          break;
+        }
+        case ApplicationInfoProperty::Name: {
+          info.name = value;
+          info.localizedNames["en_US"] = value;
+          break;
+        }
+        case ApplicationInfoProperty::GenericName: {
+          info.genericName = value;
+          info.localizedGenericNames["en_US"] = value;
+          break;
+        }
+        case ApplicationInfoProperty::Comment: {
+          info.comment = value;
+          info.localizedComments["en_US"] = value;
+          break;
+        }
+        case ApplicationInfoProperty::Categories: {
+          // TODO: test that the filter works
+          info.categories = value.split(";").filter(NON_EMPTY_REG_EXP);
+          break;
+        }
+        case ApplicationInfoProperty::MimeType: {
+          info.mimeTypes = value.split(";").filter(NON_EMPTY_REG_EXP);
+          for (const auto &mimeType : info.mimeTypes) {
+            this->mDefaultMimetypeHandlers[mimeType] = filePath;
           }
-        } else if (section == SectionType::DesktopEntry) {
-          const auto parts = line.split('=');
-          const auto &key = parts[0];
-          const auto value = parts.length() < 2    ? QString()
-                             : parts.length() == 2 ? parts[1]
-                                                   : parts.sliced(1).join('=');
-          auto keyType = NAME_TO_APPLICATION_INFO_PROPERTY.constFind(key);
-          if (keyType != NAME_TO_APPLICATION_INFO_PROPERTY.constEnd()) {
-            switch (keyType.value()) {
-            case ApplicationInfoProperty::Exec: {
-              info.exec = value;
-              break;
-            }
-            case ApplicationInfoProperty::Type: {
-              info.type = value;
-              break;
-            }
-            case ApplicationInfoProperty::Icon: {
-              info.icon = value;
-              break;
-            }
-            case ApplicationInfoProperty::Name: {
-              info.name = value;
-              info.localizedNames["en_US"] = value;
-              break;
-            }
-            case ApplicationInfoProperty::GenericName: {
-              info.genericName = value;
-              info.localizedGenericNames["en_US"] = value;
-              break;
-            }
-            case ApplicationInfoProperty::Comment: {
-              info.comment = value;
-              info.localizedComments["en_US"] = value;
-              break;
-            }
-            case ApplicationInfoProperty::Categories: {
-              // TODO: test that the filter works
-              info.categories = value.split(";").filter(NON_EMPTY_REG_EXP);
-              break;
-            }
-            case ApplicationInfoProperty::MimeType: {
-              info.mimeTypes = value.split(";").filter(NON_EMPTY_REG_EXP);
-              for (const auto &mimeType : info.mimeTypes) {
-                this->mDefaultMimetypeHandlers[mimeType] = filePath;
-              }
-              break;
-            }
-            case ApplicationInfoProperty::StartupNotify: {
-              info.startupNotify = value == "true";
-              break;
-            }
-            case ApplicationInfoProperty::Terminal: {
-              info.terminal = value == "true";
-              break;
-            }
-            case ApplicationInfoProperty::LocalizedNames:
-            case ApplicationInfoProperty::LocalizedGenericNames:
-            case ApplicationInfoProperty::LocalizedComments: {
-              // ignore; these do not have one single key name
-              break;
-            }
-            }
-          } else if (key.contains(LOCALIZED_NAME_REG_EXP, &match)) {
-            info.localizedNames[match.captured(1)] = value;
-          } else if (key.contains(LOCALIZED_GENERIC_NAME_REG_EXP, &match)) {
-            info.localizedGenericNames[match.captured(1)] = value;
-          } else if (key.contains(LOCALIZED_COMMENT_REG_EXP, &match)) {
-            info.localizedComments[match.captured(1)] = value;
-          }
-        } else if (section == SectionType::DesktopAction) {
-          const auto parts = line.split('=');
-          const auto &key = parts[0];
-          const auto value = parts.length() < 2    ? QString()
-                             : parts.length() == 2 ? parts[1]
-                                                   : parts.sliced(1).join('=');
-          auto keyType =
-              NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constFind(key);
-          if (keyType !=
-              NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constEnd()) {
-            switch (keyType.value()) {
-            case ApplicationDesktopActionProperty::Name: {
-              action.name = value;
-              break;
-            }
-            case ApplicationDesktopActionProperty::Exec: {
-              action.exec = value;
-              break;
-            }
-            }
-          }
+          break;
+        }
+        case ApplicationInfoProperty::StartupNotify: {
+          info.startupNotify = value == "true";
+          break;
+        }
+        case ApplicationInfoProperty::Terminal: {
+          info.terminal = value == "true";
+          break;
+        }
+        case ApplicationInfoProperty::LocalizedNames:
+        case ApplicationInfoProperty::LocalizedGenericNames:
+        case ApplicationInfoProperty::LocalizedComments: {
+          // ignore; these do not have one single key name
+          break;
+        }
+        }
+      } else if (key.contains(LOCALIZED_NAME_REG_EXP, &match)) {
+        info.localizedNames[match.captured(1)] = value;
+      } else if (key.contains(LOCALIZED_GENERIC_NAME_REG_EXP, &match)) {
+        info.localizedGenericNames[match.captured(1)] = value;
+      } else if (key.contains(LOCALIZED_COMMENT_REG_EXP, &match)) {
+        info.localizedComments[match.captured(1)] = value;
+      }
+    } else if (section == SectionType::DesktopAction) {
+      const auto parts = line.split('=');
+      const auto &key = parts[0];
+      const auto value = parts.length() < 2    ? QString()
+                         : parts.length() == 2 ? parts[1]
+                                               : parts.sliced(1).join('=');
+      auto keyType = NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constFind(key);
+      if (keyType != NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constEnd()) {
+        switch (keyType.value()) {
+        case ApplicationDesktopActionProperty::Name: {
+          action.name = value;
+          break;
+        }
+        case ApplicationDesktopActionProperty::Exec: {
+          action.exec = value;
+          break;
+        }
         }
       }
-      this->mApplications[filePath] = info;
     }
-    emit this->applicationsChanged();
   }
+  this->mApplications[filePath] = info;
 }

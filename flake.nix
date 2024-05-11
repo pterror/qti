@@ -16,9 +16,16 @@
           qti-plugin-core = pkgs.callPackage ./nix-modules/qti-plugin-core.nix { };
           qti-plugin-clipboard = pkgs.callPackage ./nix-modules/qti-plugin-clipboard.nix { };
           qti-plugin-screenshot = pkgs.callPackage ./nix-modules/qti-plugin-screenshot.nix { };
+          qti-plugin-application-database = pkgs.callPackage ./nix-modules/qti-plugin-application-database.nix { };
           qti-app-screenshot-editor = pkgs.callPackage ./nix-modules/qti-app-screenshot-editor.nix { };
           default = qti;
-          qti-all-plugins = [ qti-plugin-stdlib qti-plugin-core qti-plugin-clipboard qti-plugin-screenshot ];
+          qti-all-plugins = [
+            qti-plugin-stdlib
+            qti-plugin-core
+            qti-plugin-clipboard
+            qti-plugin-screenshot
+            qti-plugin-application-database
+          ];
           qti-all-apps = [ qti-app-screenshot-editor ];
           qti-all = [ qti ] ++ qti-all-plugins ++ qti-all-apps;
         });
