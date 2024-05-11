@@ -22,6 +22,7 @@ struct ApplicationInfo {
   Q_GADGET;
   Q_PROPERTY(QString type MEMBER type);
   Q_PROPERTY(QString icon MEMBER icon);
+  Q_PROPERTY(QString name MEMBER name);
   Q_PROPERTY(QMap<QString, QString> localizedNames MEMBER localizedNames);
   Q_PROPERTY(QString genericName MEMBER genericName);
   Q_PROPERTY(QMap<QString, QString> localizedGenericNames MEMBER
@@ -58,16 +59,22 @@ class ApplicationDatabase : public QObject {
   QML_NAMED_ELEMENT(ApplicationDatabase);
   QML_SINGLETON;
 
+  Q_PROPERTY(bool mergeByName READ mergeByName WRITE setMergeByName NOTIFY
+                 mergeByNameChanged);
   Q_PROPERTY(QList<ApplicationInfo> applications READ applications NOTIFY
                  applicationsChanged);
 
 public:
+  [[nodiscard]] bool mergeByName() const;
+  void setMergeByName(bool mergeByName);
+
   [[nodiscard]] QList<ApplicationInfo> applications();
 
   Q_INVOKABLE [[nodiscard]] QString
   applicationNameForMimetype(const QString &mimeType);
 
 signals:
+  void mergeByNameChanged();
   void applicationsChanged();
 
 private:
@@ -76,6 +83,8 @@ private:
   void scanFile(const QString &filePath);
 
   bool mInitialized = false;
+  bool mMergeByName = true;
   QMap<QString, ApplicationInfo> mApplications;
+  QMap<QString, QString> mApplicationNameToFirstPath;
   QMap<QString, QString> mDefaultMimetypeHandlers;
 };

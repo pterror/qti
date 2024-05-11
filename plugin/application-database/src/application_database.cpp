@@ -13,6 +13,15 @@ bool ApplicationDesktopAction::operator==(
          this->exec == other.exec;
 }
 
+bool ApplicationDatabase::mergeByName() const { return this->mMergeByName; }
+
+void ApplicationDatabase::setMergeByName(bool mergeByName) {
+  this->mMergeByName = mergeByName;
+  emit this->mergeByNameChanged();
+  this->mInitialized = false;
+  this->initialize();
+}
+
 QList<ApplicationInfo> ApplicationDatabase::applications() {
   if (!this->mInitialized) {
     this->initialize();
@@ -81,6 +90,9 @@ void ApplicationDatabase::initialize() {
     return;
   }
   this->mInitialized = true;
+  this->mApplications.clear();
+  this->mApplicationNameToFirstPath.clear();
+  this->mDefaultMimetypeHandlers.clear();
   auto xdgDataDirs = QString(qgetenv("XDG_DATA_DIRS"));
   if (xdgDataDirs.isEmpty()) {
     xdgDataDirs = "/usr/share";
@@ -113,7 +125,7 @@ void ApplicationDatabase::scanFile(const QString &filePath) {
   }
   auto section = SectionType::DesktopEntry;
   auto info = ApplicationInfo();
-  auto action = ApplicationDesktopAction();
+  auto *action = static_cast<ApplicationDesktopAction *>(nullptr);
   auto match = QRegularExpressionMatch();
   file.open(QIODeviceBase::ReadOnly);
   while (!file.atEnd()) {
@@ -123,9 +135,8 @@ void ApplicationDatabase::scanFile(const QString &filePath) {
         section = SectionType::DesktopEntry;
       } else if (line.contains(DESKTOP_ACTION_REG_EXP, &match)) {
         section = SectionType::DesktopAction;
-        // TODO: fix this if `name` and `exec` are not being set
-        action = info.actions.emplace_back(ApplicationDesktopAction());
-        action.id = match.captured(1);
+        action = &info.actions.emplace_back(ApplicationDesktopAction());
+        action->id = match.captured(1);
       }
     } else if (section == SectionType::DesktopEntry) {
       const auto parts = line.split('=');
@@ -133,9 +144,9 @@ void ApplicationDatabase::scanFile(const QString &filePath) {
       const auto value = parts.length() < 2    ? QString()
                          : parts.length() == 2 ? parts[1]
                                                : parts.sliced(1).join('=');
-      auto keyType = NAME_TO_APPLICATION_INFO_PROPERTY.constFind(key);
-      if (keyType != NAME_TO_APPLICATION_INFO_PROPERTY.constEnd()) {
-        switch (keyType.value()) {
+      auto keyTypeIt = NAME_TO_APPLICATION_INFO_PROPERTY.constFind(key);
+      if (keyTypeIt != NAME_TO_APPLICATION_INFO_PROPERTY.constEnd()) {
+        switch (keyTypeIt.value()) {
         case ApplicationInfoProperty::Exec: {
           info.exec = value;
           break;
@@ -164,13 +175,15 @@ void ApplicationDatabase::scanFile(const QString &filePath) {
           break;
         }
         case ApplicationInfoProperty::Categories: {
-          // TODO: test that the filter works
           info.categories = value.split(";").filter(NON_EMPTY_REG_EXP);
           break;
         }
         case ApplicationInfoProperty::MimeType: {
           info.mimeTypes = value.split(";").filter(NON_EMPTY_REG_EXP);
           for (const auto &mimeType : info.mimeTypes) {
+            if (this->mDefaultMimetypeHandlers.contains(mimeType)) {
+              continue;
+            }
             this->mDefaultMimetypeHandlers[mimeType] = filePath;
           }
           break;
@@ -203,19 +216,35 @@ void ApplicationDatabase::scanFile(const QString &filePath) {
       const auto value = parts.length() < 2    ? QString()
                          : parts.length() == 2 ? parts[1]
                                                : parts.sliced(1).join('=');
-      auto keyType = NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constFind(key);
-      if (keyType != NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constEnd()) {
-        switch (keyType.value()) {
+      auto keyTypeIt =
+          NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constFind(key);
+      if (keyTypeIt != NAME_TO_APPLICATION_DESKTOP_ACTION_PROPERTY.constEnd()) {
+        switch (keyTypeIt.value()) {
         case ApplicationDesktopActionProperty::Name: {
-          action.name = value;
+          action->name = value;
           break;
         }
         case ApplicationDesktopActionProperty::Exec: {
-          action.exec = value;
+          action->exec = value;
           break;
         }
         }
       }
+    }
+  }
+  if (this->mMergeByName) {
+    const auto pathIt = this->mApplicationNameToFirstPath.constFind(info.name);
+    if (pathIt == this->mApplicationNameToFirstPath.constEnd()) {
+      this->mApplicationNameToFirstPath[info.name] = filePath;
+    } else {
+      const auto &path = pathIt.value();
+      auto existingInfo = this->mApplications[path];
+      // assume localizations and categories never need to be merged
+      // assume mimetypes and actions never overlap
+      existingInfo.mimeTypes.append(info.mimeTypes);
+      existingInfo.actions.append(info.actions);
+      this->mApplications[path] = existingInfo;
+      return;
     }
   }
   this->mApplications[filePath] = info;
