@@ -33,7 +33,7 @@
       devShells = forEachSystem (system: pkgs: rec {
         default = import ./shell.nix {
           inherit pkgs;
-          inherit (self.packages.${system}) quickshell;
+          inherit (self.packages.${system}) default;
         };
       });
     };
