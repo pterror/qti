@@ -1,50 +1,57 @@
 #include "sql_database.hpp"
-#include <ranges>
+
+#include <qcontainerfwd.h>
+#include <qvariant.h>
+#include <utility>
+
+#include <QSqlField>
+#include <QSqlRecord>
+#include <QSqlResult>
 
 SqlDatabase::SqlDatabase()
     : mDatabaseId(QUuid::createUuid()), mType("QSQLITE") {}
 
 QString SqlDatabase::type() const { return this->mType; }
-void SqlDatabase::setType(QString value) {
-  this->mType = value;
+void SqlDatabase::setType(QString type) {
+  this->mType = std::move(type);
   this->reload();
 }
 
 QString SqlDatabase::name() const { return this->mName; }
-void SqlDatabase::setName(QString value) {
-  this->mName = value;
+void SqlDatabase::setName(QString name) {
+  this->mName = std::move(name);
   this->reload();
 }
 
 QString SqlDatabase::username() const { return this->mUsername; }
-void SqlDatabase::setUsername(QString value) {
-  this->mUsername = value;
+void SqlDatabase::setUsername(QString username) {
+  this->mUsername = std::move(username);
   this->reload();
 }
 
 QString SqlDatabase::password() const { return this->mPassword; }
-void SqlDatabase::setPassword(QString value) {
-  this->mPassword = value;
+void SqlDatabase::setPassword(QString password) {
+  this->mPassword = std::move(password);
   this->reload();
 }
 
 QString SqlDatabase::hostname() const { return this->mHostname; }
-void SqlDatabase::setHostname(QString value) {
-  this->mHostname = value;
+void SqlDatabase::setHostname(QString hostname) {
+  this->mHostname = std::move(hostname);
   this->reload();
 }
 
 int SqlDatabase::port() const { return this->mPort; }
-void SqlDatabase::setPort(int value) {
-  this->mPort = value;
+void SqlDatabase::setPort(int port) {
+  this->mPort = port;
   this->reload();
 }
 
 QString SqlDatabase::connectionOptions() const {
   return this->mConnectionOptions;
 }
-void SqlDatabase::setConnectionOptions(QString value) {
-  this->mConnectionOptions = value;
+void SqlDatabase::setConnectionOptions(QString connectionOptions) {
+  this->mConnectionOptions = std::move(connectionOptions);
   this->reload();
 }
 
@@ -65,9 +72,45 @@ void SqlDatabase::reload() {
   this->mInitialized = true;
 }
 
-// Could be implemented using `insertMany`, but kept separate as a
-// micro-optimization.
-void SqlDatabase::insert(QString tableName, QVariant row) {
+// TODO: does this work?
+void SqlDatabase::transaction(const QJSValue &function) const {
+  const auto id = this->mDatabaseId.toString();
+  auto database = QSqlDatabase::database(id);
+  database.transaction();
+  function.call();
+  database.commit();
+}
+
+QList<QVariantMap> SqlDatabase::getRows(const QString &tableName) const {
+  const auto id = this->mDatabaseId.toString();
+  auto database = QSqlDatabase::database(id);
+  const auto queryString = "SELECT * FROM `" + tableName + "`";
+  auto query = QSqlQuery(queryString, database);
+  query.exec();
+  auto rows = QList<QVariantMap>();
+  const auto record = query.record();
+  const auto keysCount = record.count();
+  while (query.next()) {
+    // cannot be `const` otherwise it stays empty
+    auto row = QVariantMap();
+    for (auto i = 0; i < keysCount; i += 1) {
+      row[record.fieldName(i)] = query.value(i);
+    }
+    rows.emplace_back(row);
+  }
+  return rows;
+}
+
+QList<QVariantMap>
+SqlDatabase::select(const QString &tableName,          // NOLINT
+                    const QString &expression) const { // NOLINT
+                                                       // TODO:
+  return QList<QVariantMap>();
+}
+
+// could be implemented using `insertMany`, but kept separate as a
+// premature optimization
+void SqlDatabase::insert(const QString &tableName, const QVariant &row) const {
   const auto id = this->mDatabaseId.toString();
   const auto database = QSqlDatabase::database(id);
   const auto rowAsMap = row.toMap();
@@ -80,14 +123,15 @@ void SqlDatabase::insert(QString tableName, QVariant row) {
                            ") VALUES (" + placeholdersString + ")";
   auto query = QSqlQuery(queryString, database);
   const auto values = rowAsMap.values();
-  for (const auto i : std::views::iota(0, keysCount)) {
+  for (auto i = 0; i < keysCount; i += 1) {
     query.bindValue(i, values[i]);
   }
   query.exec();
 }
 
-void SqlDatabase::insertMany(QString tableName, QList<QVariant> rows) {
-  if (rows.size() == 0) {
+void SqlDatabase::insertMany(const QString &tableName,
+                             QList<QVariant> rows) const {
+  if (rows.empty()) {
     return;
   }
   const auto id = this->mDatabaseId.toString();
@@ -105,10 +149,45 @@ void SqlDatabase::insertMany(QString tableName, QList<QVariant> rows) {
   database.transaction();
   for (const auto &row : rows) {
     const auto map = row.toMap();
-    for (const auto i : std::views::iota(0, keysCount)) {
+    for (auto i = 0; i < keysCount; i += 1) {
       query.bindValue(i, map[keys[i]]);
     }
     query.exec();
   }
   database.commit();
+}
+
+void SqlDatabase::update(const QString &tableName,          // NOLINT
+                         const QString &expression) const { // NOLINT
+  // TODO:
+}
+
+void SqlDatabase::delete_(const QString &tableName,          // NOLINT
+                          const QString &expression) const { // NOLINT
+  // TODO:
+}
+
+void SqlDatabase::createTable(const QString &tableName,        // NOLINT
+                              QList<QVariant> columns) const { // NOLINT
+  // TODO:
+}
+
+QStringList SqlDatabase::getTables() const {
+  if (this->mType == "QSQLITE") {
+    const auto id = this->mDatabaseId.toString();
+    auto database = QSqlDatabase::database(id);
+    static const auto *queryString =
+        "SELECT name FROM sqlite_master WHERE type='table'";
+    auto query = QSqlQuery(queryString, database);
+    query.exec();
+    auto rows = QStringList();
+    while (query.next()) {
+      rows.emplace_back(query.value(0).toString());
+    }
+    return rows;
+  } else {
+    qWarning() << "Qti.Sql does not know how to list tables for" << this->mType
+               << "databases.";
+    return QStringList();
+  }
 }

@@ -3,13 +3,37 @@
 #include <QCoreApplication>
 
 #include <QGuiApplication>
+#include <QNetworkAccessManager>
+#include <QNetworkDiskCache>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
+#include <QQmlNetworkAccessManagerFactory>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <cstdlib>
+#include <limits>
 
 const auto FILE_DIRECTORY_AND_NAME_REG_EXP =
     QRegularExpression("(.*)/([^/]+?)(?:[.]qml)?$");
+
+class DiskNetworkAccessManagerFactory : public QQmlNetworkAccessManagerFactory {
+public:
+  QNetworkAccessManager *create(QObject *parent) override;
+};
+
+QNetworkAccessManager *
+DiskNetworkAccessManagerFactory::create(QObject *parent) {
+  auto *networkAccessManager = new QNetworkAccessManager(parent);
+  auto *cache = new QNetworkDiskCache(parent);
+  cache->setMaximumCacheSize(std::numeric_limits<qint64>::max());
+  cache->setCacheDirectory(QString(std::getenv("HOME")) + // NOLINT
+                           "/.cache/qti/web/");
+  networkAccessManager->setCache(cache);
+  qInfo() << ":)"
+          << dynamic_cast<QNetworkDiskCache *>(networkAccessManager->cache())
+                 ->cacheDirectory();
+  return networkAccessManager;
+}
 
 int main(int argc, char **argv) {
   const auto app = QGuiApplication(argc, argv);
@@ -44,7 +68,11 @@ int main(int argc, char **argv) {
   themeSearchPaths.emplace_back(appDirectory + "/icons");
   QIcon::setThemeSearchPaths(themeSearchPaths);
 
-  const auto engine = QQmlApplicationEngine(path);
+  auto engine = QQmlApplicationEngine();
+  auto *networkAccessManagerFactory = new DiskNetworkAccessManagerFactory();
+  engine.setNetworkAccessManagerFactory(networkAccessManagerFactory);
+  engine.networkAccessManager();
+  engine.load(path);
   QQuickWindow::setDefaultAlphaBuffer(true);
   if (cliParser.isSet(daemonOption)) {
     QGuiApplication::setQuitOnLastWindowClosed(false);

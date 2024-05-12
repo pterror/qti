@@ -2,7 +2,7 @@
 find_package(Qt6 REQUIRED COMPONENTS Gui)
 qt_add_qml_module(qti_core URI Qti.Core VERSION 0.1 SHARED
     SOURCES
-    core.cpp core.hpp
+    qti_core.cpp qti_core.hpp
 )
 install(TARGETS qti_core)
 install(DIRECTORY "${QT_QML_OUTPUT_DIRECTORY}" DESTINATION "${INSTALL_QMLDIR}")

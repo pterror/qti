@@ -14,6 +14,7 @@ option(PLUGIN_CORE "Include Core plugin" ${PLUGINS})
 option(PLUGIN_SCREENSHOT "Include Screenshot plugin" ${PLUGINS})
 option(PLUGIN_CLIPBOARD "Include Clipboard plugin" ${PLUGINS})
 option(PLUGIN_APPLICATION_DATABASE "Include Application Database plugin" ${PLUGINS})
+option(PLUGIN_SQL "Include SQL plugin" ${PLUGINS})
 
 # nix workaround
 if (CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -45,4 +46,8 @@ endif()
 
 if (PLUGIN_APPLICATION_DATABASE)
     add_subdirectory(plugin/application-database)
+endif()
+
+if (PLUGIN_SQL)
+    add_subdirectory(plugin/sql)
 endif()

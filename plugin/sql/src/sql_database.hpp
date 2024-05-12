@@ -4,6 +4,8 @@
 #include <QSqlQuery>
 #include <QUuid>
 #include <QtQml/QQmlEngine>
+#include <qcontainerfwd.h>
+#include <qtmetamacros.h>
 
 class SqlDatabase : public QObject {
   Q_OBJECT;
@@ -44,14 +46,21 @@ public:
   [[nodiscard]] QString connectionOptions() const;
   void setConnectionOptions(QString connectionOptions);
 
-  // TODO: consider whether `transaction()` is needed.
-  void insert(QString tableName, QVariant row);
-  void insertMany(QString tableName, QList<QVariant> rows);
-  // TODO: fill in arguments
-  // TODO: how to conditions
-  void update(QString tableName);
-  void delete_(QString tableName);
-  void createTable(QString tableName, QList<QVariant> columns);
+  Q_INVOKABLE void transaction(const QJSValue &function) const;
+  Q_INVOKABLE [[nodiscard]] QList<QVariantMap>
+  getRows(const QString &tableName) const;
+  Q_INVOKABLE [[nodiscard]] QList<QVariantMap>
+  select(const QString &tableName, const QString &expression) const;
+  Q_INVOKABLE void insert(const QString &tableName, const QVariant &row) const;
+  Q_INVOKABLE void insertMany(const QString &tableName,
+                              QList<QVariant> rows) const;
+  Q_INVOKABLE void update(const QString &tableName,
+                          const QString &expression) const;
+  Q_INVOKABLE void delete_(const QString &tableName, // NOLINT
+                           const QString &expression) const;
+  Q_INVOKABLE void createTable(const QString &tableName,
+                               QList<QVariant> columns) const;
+  Q_INVOKABLE [[nodiscard]] QStringList getTables() const;
 
 signals:
   void typeChanged();
@@ -66,13 +75,13 @@ signals:
 private:
   void reload();
 
-  bool mInitialized;
+  bool mInitialized = false;
   QUuid mDatabaseId;
   QString mType;
   QString mName;
   QString mUsername;
   QString mPassword;
   QString mHostname;
-  qint32 mPort;
+  qint32 mPort = 0;
   QString mConnectionOptions;
 };

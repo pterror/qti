@@ -7,7 +7,7 @@
 #include <qclipboard.h>
 #include <qtmetamacros.h>
 
-class Core : public QObject { // NOLINT
+class QtiCore : public QObject { // NOLINT
   Q_OBJECT;
   QML_NAMED_ELEMENT(QtiCore);
   QML_SINGLETON;
@@ -20,6 +20,7 @@ public:
   [[nodiscard]] bool quitOnLastWindowClosed();
   void setQuitOnLastWindowClosed(bool quit);
 
+  Q_INVOKABLE [[nodiscard]] static QString env(const QString &variable);
   Q_INVOKABLE [[nodiscard]] static QImage copyImage(const QImage &image,
                                                     const QRect &rect);
   Q_INVOKABLE [[nodiscard]] static QPixmap copyPixmap(const QPixmap &pixmap,
