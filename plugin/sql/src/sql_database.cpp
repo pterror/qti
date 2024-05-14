@@ -1,5 +1,7 @@
 #include "sql_database.hpp"
 
+#include "sql_table.hpp"
+
 #include <qcontainerfwd.h>
 #include <qvariant.h>
 #include <utility>
@@ -9,7 +11,12 @@
 #include <QSqlResult>
 
 SqlDatabase::SqlDatabase()
-    : mDatabaseId(QUuid::createUuid()), mType("QSQLITE") {}
+    : mDatabaseId(QUuid::createUuid()), mType("QSQLITE") {
+  QObject::connect(this, &SqlDatabase::reloaded, this,
+                   &SqlDatabase::tableNamesChanged);
+  QObject::connect(this, &SqlDatabase::reloaded, this,
+                   &SqlDatabase::tablesChanged);
+}
 
 QString SqlDatabase::type() const { return this->mType; }
 void SqlDatabase::setType(QString type) {
@@ -55,6 +62,41 @@ void SqlDatabase::setConnectionOptions(QString connectionOptions) {
   this->reload();
 }
 
+QStringList SqlDatabase::tableNames() const {
+  if (this->mType == "QSQLITE") {
+    const auto id = this->mDatabaseId.toString();
+    auto database = QSqlDatabase::database(id);
+    if (!database.isOpen()) {
+      return QStringList();
+    }
+    static const auto *queryString =
+        "SELECT name FROM sqlite_master WHERE type='table'";
+    auto query = QSqlQuery(queryString, database);
+    query.exec();
+    auto rows = QStringList();
+    while (query.next()) {
+      rows.emplace_back(query.value(0).toString());
+    }
+    return rows;
+  } else {
+    qWarning() << "Qti.Sql does not know how to list tables for" << this->mType
+               << "databases.";
+    return QStringList();
+  }
+}
+
+QVariantMap SqlDatabase::tables() {
+  const auto tableNames = this->tableNames();
+  // cannot be `const` otherwise it stays empty
+  auto tables = QVariantMap();
+  for (const auto &tableName : tableNames) {
+    auto *table = new SqlTable(this);
+    table->setName(tableName);
+    tables[tableName] = QVariant::fromValue(table);
+  }
+  return tables;
+}
+
 void SqlDatabase::reload() {
   auto id = this->mDatabaseId.toString();
   if (this->mInitialized) {
@@ -70,6 +112,7 @@ void SqlDatabase::reload() {
   database.setConnectOptions(this->mConnectionOptions);
   database.open();
   this->mInitialized = true;
+  emit this->reloaded();
 }
 
 // TODO: does this work?
@@ -84,6 +127,9 @@ void SqlDatabase::transaction(const QJSValue &function) const {
 QList<QVariantMap> SqlDatabase::getRows(const QString &tableName) const {
   const auto id = this->mDatabaseId.toString();
   auto database = QSqlDatabase::database(id);
+  if (!database.isOpen()) {
+    return QList<QVariantMap>();
+  }
   const auto queryString = "SELECT * FROM `" + tableName + "`";
   auto query = QSqlQuery(queryString, database);
   query.exec();
@@ -104,7 +150,8 @@ QList<QVariantMap> SqlDatabase::getRows(const QString &tableName) const {
 QList<QVariantMap>
 SqlDatabase::select(const QString &tableName,          // NOLINT
                     const QString &expression) const { // NOLINT
-                                                       // TODO:
+
+  // TODO:
   return QList<QVariantMap>();
 }
 
@@ -170,24 +217,4 @@ void SqlDatabase::delete_(const QString &tableName,          // NOLINT
 void SqlDatabase::createTable(const QString &tableName,        // NOLINT
                               QList<QVariant> columns) const { // NOLINT
   // TODO:
-}
-
-QStringList SqlDatabase::getTables() const {
-  if (this->mType == "QSQLITE") {
-    const auto id = this->mDatabaseId.toString();
-    auto database = QSqlDatabase::database(id);
-    static const auto *queryString =
-        "SELECT name FROM sqlite_master WHERE type='table'";
-    auto query = QSqlQuery(queryString, database);
-    query.exec();
-    auto rows = QStringList();
-    while (query.next()) {
-      rows.emplace_back(query.value(0).toString());
-    }
-    return rows;
-  } else {
-    qWarning() << "Qti.Sql does not know how to list tables for" << this->mType
-               << "databases.";
-    return QStringList();
-  }
 }

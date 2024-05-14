@@ -21,6 +21,7 @@ Button {
 
 	MouseArea {
 		id: mouseArea
+		enabled: root.enabled
 		hoverEnabled: true
 		anchors.fill: parent
 		anchors.margins: 0

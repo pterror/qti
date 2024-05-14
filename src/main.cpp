@@ -29,9 +29,6 @@ DiskNetworkAccessManagerFactory::create(QObject *parent) {
   cache->setCacheDirectory(QString(std::getenv("HOME")) + // NOLINT
                            "/.cache/qti/web/");
   networkAccessManager->setCache(cache);
-  qInfo() << ":)"
-          << dynamic_cast<QNetworkDiskCache *>(networkAccessManager->cache())
-                 ->cacheDirectory();
   return networkAccessManager;
 }
 

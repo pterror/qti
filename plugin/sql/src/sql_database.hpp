@@ -5,7 +5,6 @@
 #include <QUuid>
 #include <QtQml/QQmlEngine>
 #include <qcontainerfwd.h>
-#include <qtmetamacros.h>
 
 class SqlDatabase : public QObject {
   Q_OBJECT;
@@ -21,9 +20,11 @@ class SqlDatabase : public QObject {
   Q_PROPERTY(qint32 port READ port WRITE setPort NOTIFY portChanged);
   Q_PROPERTY(QString connectionOptions READ connectionOptions WRITE
                  setConnectionOptions NOTIFY connectionOptionsChanged);
+  Q_PROPERTY(QStringList tableNames READ tableNames NOTIFY tableNamesChanged);
+  Q_PROPERTY(QVariantMap tables READ tables NOTIFY tablesChanged);
 
 public:
-  SqlDatabase();
+  explicit SqlDatabase();
 
   [[nodiscard]] QString type() const;
   void setType(QString type);
@@ -46,6 +47,10 @@ public:
   [[nodiscard]] QString connectionOptions() const;
   void setConnectionOptions(QString connectionOptions);
 
+  [[nodiscard]] QStringList tableNames() const;
+
+  [[nodiscard]] QVariantMap tables();
+
   Q_INVOKABLE void transaction(const QJSValue &function) const;
   Q_INVOKABLE [[nodiscard]] QList<QVariantMap>
   getRows(const QString &tableName) const;
@@ -60,7 +65,6 @@ public:
                            const QString &expression) const;
   Q_INVOKABLE void createTable(const QString &tableName,
                                QList<QVariant> columns) const;
-  Q_INVOKABLE [[nodiscard]] QStringList getTables() const;
 
 signals:
   void typeChanged();
@@ -70,7 +74,9 @@ signals:
   void hostnameChanged();
   void portChanged();
   void connectionOptionsChanged();
-  void pathChanged();
+  void tableNamesChanged();
+  void tablesChanged();
+  void reloaded();
 
 private:
   void reload();

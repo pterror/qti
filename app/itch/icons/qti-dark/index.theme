@@ -20,7 +20,13 @@ PanelSizes=16,22,24,32,48,64
 DialogDefault=48
 DialogSizes=16,22,24,32,48,64
 
-Directories=symbolic/logos
+Directories=symbolic/applications,symbolic/logos
+
+[symbolic/applications]
+Size=16
+MinSize=16
+MaxSize=512
+Type=Scalable
 
 [symbolic/logos]
 Size=16
