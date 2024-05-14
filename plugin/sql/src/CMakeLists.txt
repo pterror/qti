@@ -4,6 +4,7 @@ qt_add_qml_module(qti_sql URI Qti.Sql VERSION 0.1 SHARED
     SOURCES
     sql_database.cpp sql_database.hpp
     sql_table.cpp sql_table.hpp
+    sql_query_model.cpp sql_query_model.hpp
 )
 install(TARGETS qti_sql)
 install(DIRECTORY "${QT_QML_OUTPUT_DIRECTORY}" DESTINATION "${INSTALL_QMLDIR}")

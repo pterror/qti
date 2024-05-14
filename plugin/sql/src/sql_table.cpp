@@ -18,6 +18,6 @@ void SqlTable::setName(const QString &name) {
   emit this->nameChanged();
 }
 
-QList<QVariantMap> SqlTable::rows() const {
+QVariant SqlTable::rows() const {
   return this->mDatabase->getRows(this->mName);
 }

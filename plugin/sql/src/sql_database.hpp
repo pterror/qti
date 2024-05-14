@@ -4,7 +4,6 @@
 #include <QSqlQuery>
 #include <QUuid>
 #include <QtQml/QQmlEngine>
-#include <qcontainerfwd.h>
 
 class SqlDatabase : public QObject {
   Q_OBJECT;
@@ -52,10 +51,8 @@ public:
   [[nodiscard]] QVariantMap tables();
 
   Q_INVOKABLE void transaction(const QJSValue &function) const;
-  Q_INVOKABLE [[nodiscard]] QList<QVariantMap>
-  getRows(const QString &tableName) const;
-  Q_INVOKABLE [[nodiscard]] QList<QVariantMap>
-  select(const QString &tableName, const QString &expression) const;
+  Q_INVOKABLE [[nodiscard]] QVariant getRows(const QString &tableName);
+  Q_INVOKABLE [[nodiscard]] QVariant query(const QString &query);
   Q_INVOKABLE void insert(const QString &tableName, const QVariant &row) const;
   Q_INVOKABLE void insertMany(const QString &tableName,
                               QList<QVariant> rows) const;

@@ -1,5 +1,6 @@
 #include "sql_database.hpp"
 
+#include "sql_query_model.hpp"
 #include "sql_table.hpp"
 
 #include <qcontainerfwd.h>
@@ -124,35 +125,25 @@ void SqlDatabase::transaction(const QJSValue &function) const {
   database.commit();
 }
 
-QList<QVariantMap> SqlDatabase::getRows(const QString &tableName) const {
+QVariant SqlDatabase::getRows(const QString &tableName) {
   const auto id = this->mDatabaseId.toString();
   auto database = QSqlDatabase::database(id);
   if (!database.isOpen()) {
-    return QList<QVariantMap>();
+    return QVariant::fromValue(new SqlQueryModel(this, QSqlQuery()));
   }
   const auto queryString = "SELECT * FROM `" + tableName + "`";
-  auto query = QSqlQuery(queryString, database);
-  query.exec();
-  auto rows = QList<QVariantMap>();
-  const auto record = query.record();
-  const auto keysCount = record.count();
-  while (query.next()) {
-    // cannot be `const` otherwise it stays empty
-    auto row = QVariantMap();
-    for (auto i = 0; i < keysCount; i += 1) {
-      row[record.fieldName(i)] = query.value(i);
-    }
-    rows.emplace_back(row);
-  }
-  return rows;
+  return QVariant::fromValue(
+      new SqlQueryModel(this, QSqlQuery(queryString, database)));
 }
 
-QList<QVariantMap>
-SqlDatabase::select(const QString &tableName,          // NOLINT
-                    const QString &expression) const { // NOLINT
-
-  // TODO:
-  return QList<QVariantMap>();
+QVariant SqlDatabase::query(const QString &query) {
+  const auto id = this->mDatabaseId.toString();
+  auto database = QSqlDatabase::database(id);
+  if (!database.isOpen()) {
+    return QVariant::fromValue(new SqlQueryModel(this, QSqlQuery()));
+  }
+  return QVariant::fromValue(
+      new SqlQueryModel(this, QSqlQuery(query, database)));
 }
 
 // could be implemented using `insertMany`, but kept separate as a
