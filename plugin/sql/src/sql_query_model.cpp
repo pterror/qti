@@ -9,8 +9,7 @@ SqlQueryModel::SqlQueryModel(QObject *parent, const QString &databaseId,
           QSqlQuery(query, QSqlDatabase::database(databaseId)))),
       mRecord(std::make_unique<QSqlRecord>(this->mQuery->record())),
       mSize(std::make_unique<int>(-1)), mQueryString(query),
-      mParameters(std::move(parameters)) {
-}
+      mParameters(std::move(parameters)) {}
 
 bool SqlQueryModel::execIfNeeded() const {
   if (this->mQuery->isActive()) {
@@ -82,7 +81,7 @@ int SqlQueryModel::rowCount(const QModelIndex & /*parent*/) const {
         low = current;
       }
     }
-    size = low;
+    size = low + 1;
   }
   *this->mSize = size;
   return size;
