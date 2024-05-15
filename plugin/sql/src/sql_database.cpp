@@ -127,23 +127,22 @@ void SqlDatabase::transaction(const QJSValue &function) const {
 
 QVariant SqlDatabase::getRows(const QString &tableName) {
   const auto id = this->mDatabaseId.toString();
-  auto database = QSqlDatabase::database(id);
+  const auto database = QSqlDatabase::database(id);
   if (!database.isOpen()) {
-    return QVariant::fromValue(new SqlQueryModel(this, QSqlQuery()));
+    return QVariant::fromValue(new SqlQueryModel(this, id, ""));
   }
   const auto queryString = "SELECT * FROM `" + tableName + "`";
-  return QVariant::fromValue(
-      new SqlQueryModel(this, QSqlQuery(queryString, database)));
+  return QVariant::fromValue(new SqlQueryModel(this, id, queryString));
 }
 
-QVariant SqlDatabase::query(const QString &query) {
+QVariant SqlDatabase::query(const QString &query,
+                            const QVariantList &parameters) {
   const auto id = this->mDatabaseId.toString();
-  auto database = QSqlDatabase::database(id);
+  const auto database = QSqlDatabase::database(id);
   if (!database.isOpen()) {
-    return QVariant::fromValue(new SqlQueryModel(this, QSqlQuery()));
+    return QVariant::fromValue(new SqlQueryModel(this, id, ""));
   }
-  return QVariant::fromValue(
-      new SqlQueryModel(this, QSqlQuery(query, database)));
+  return QVariant::fromValue(new SqlQueryModel(this, id, query, parameters));
 }
 
 // could be implemented using `insertMany`, but kept separate as a

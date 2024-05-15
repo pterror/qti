@@ -2,11 +2,34 @@
 
 #include <QSqlError>
 
-SqlQueryModel::SqlQueryModel(QObject *parent, QSqlQuery &&query)
+SqlQueryModel::SqlQueryModel(QObject *parent, const QString &databaseId,
+                             const QString &query, QVariantList parameters)
     : QAbstractListModel(parent),
-      mQuery(std::make_unique<QSqlQuery>(std::move(query))),
-      mSize(std::make_unique<int>(-1)) {
-  this->mRecord = this->mQuery->record();
+      mQuery(std::make_unique<QSqlQuery>(
+          QSqlQuery(query, QSqlDatabase::database(databaseId)))),
+      mRecord(std::make_unique<QSqlRecord>(this->mQuery->record())),
+      mSize(std::make_unique<int>(-1)), mQueryString(query),
+      mParameters(std::move(parameters)) {
+}
+
+bool SqlQueryModel::execIfNeeded() const {
+  if (this->mQuery->isActive()) {
+    return true;
+  }
+  this->mQuery->prepare(this->mQueryString);
+  const auto parameterCount = this->mParameters.size();
+  for (auto i = 0; i < parameterCount; i += 1) {
+    this->mQuery->bindValue(i, this->mParameters[i]);
+  }
+  this->mQuery->exec();
+  // if still inactive then the query is broken
+  if (!this->mQuery->isActive()) {
+    qWarning() << "Qti.Sql: SQL query failed:" << this->mQuery->lastError();
+    qWarning() << "Qti.Sql: Query was" << this->mQuery->lastQuery();
+    return false;
+  }
+  *this->mRecord = this->mQuery->record();
+  return true;
 }
 
 QVariant SqlQueryModel::headerData(int section, Qt::Orientation /*orientation*/,
@@ -18,17 +41,16 @@ int SqlQueryModel::rowCount(const QModelIndex & /*parent*/) const {
   if (*this->mSize != -1) {
     return *this->mSize;
   }
-  if (!this->mQuery->isActive()) {
-    this->mQuery->exec();
-  }
-  // if still inactive then the query is broken
-  if (!this->mQuery->isActive()) {
-    qWarning() << this->mQuery->lastError();
+  if (!this->execIfNeeded()) {
     return 0;
   }
   auto size = this->mQuery->size();
-  this->mQuery->seek(0);
   if (size == -1) {
+    this->mQuery->seek(0);
+    if (this->mQuery->at() == QSql::AfterLastRow) {
+      *this->mSize = 0;
+      return 0;
+    }
     auto current = 1 << 16;
     auto low = 0;
     auto high = 0;
@@ -43,8 +65,8 @@ int SqlQueryModel::rowCount(const QModelIndex & /*parent*/) const {
       }
     } else {
       while (position != QSql::AfterLastRow) {
-        low = current;
-        current = low * 2;
+        high = current;
+        current = high * 2;
         this->mQuery->seek(current);
         position = this->mQuery->at();
       }
@@ -67,22 +89,15 @@ int SqlQueryModel::rowCount(const QModelIndex & /*parent*/) const {
 }
 
 QVariant SqlQueryModel::data(const QModelIndex &parent, int role) const {
-  if (role != Qt::DisplayRole) {
-    return QVariant();
-  }
-  if (!this->mQuery->isActive()) {
-    this->mQuery->exec();
-  }
-  // if still inactive then the query is broken
-  if (!this->mQuery->isActive()) {
+  if (role != Qt::DisplayRole || !this->execIfNeeded()) {
     return QVariant();
   }
   this->mQuery->seek(parent.row());
-  const auto fieldCount = this->mRecord.count();
+  const auto fieldCount = this->mRecord->count();
   // cannot be const otherwise
   auto map = QVariantMap();
   for (auto i = 0; i < fieldCount; i += 1) {
-    map[this->mRecord.fieldName(i)] = this->mQuery->value(i);
+    map[this->mRecord->fieldName(i)] = this->mQuery->value(i);
   }
   return map;
 }

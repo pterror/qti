@@ -25,8 +25,7 @@ ColumnLayout {
 				elide: Text.ElideRight
 				maximumLineCount: 1
 				text: modelData.title
-				font.weight: 700
-				font.pointSize: 10
+				font.weight: 700; font.pointSize: 10
 			}
 
 			Text {
@@ -47,8 +46,8 @@ ColumnLayout {
 			IconButton { icon.name: "web"; onClicked: Qt.openUrlExternally(modelData.url) }
 			IconButton {
 				icon.name: "play"
-				visible: modelData.install_folder
-				property var folder: Folder { path: modelData.install_folder }
+				visible: modelData.install_folder ?? false
+				property var folder: Folder { path: modelData.install_folder ?? "" }
 				property var process: Process {}
 				onClicked: {
 					let filePaths = folder.files.map(file => file.path)
