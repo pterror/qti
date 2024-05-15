@@ -395,7 +395,7 @@ QtObject {
 			IconButton { icon.name: "ellipse"; active: window.currentTool == "ellipse"; onClicked: window.switchTool("ellipse") }
 			IconButton { icon.name: "rectangle"; active: window.currentTool == "rectangle"; onClicked: window.switchTool("rectangle") }
 			CustomButton {
-				id: textButton; width: 32; height: 32; active: window.currentTool == "text"
+				id: textButton; implicitWidth: 32; implicitHeight: 32; active: window.currentTool == "text"
 				Text {
 					anchors.horizontalCenter: parent.horizontalCenter
 					anchors.verticalCenter: parent.verticalCenter
@@ -414,7 +414,7 @@ QtObject {
 				}
 			}
 			CustomButton {
-				width: 32; height: 32
+				implicitWidth: 32; implicitHeight: 32
 				onClicked: {
 					colorInput.owner = colorInput.owner === "stroke" ? undefined : "stroke"
 					if (colorInput.owner !== "stroke") return
@@ -433,7 +433,7 @@ QtObject {
 				}
 			}
 			CustomButton {
-				width: 32; height: 32
+				implicitWidth: 32; implicitHeight: 32
 				onClicked: {
 					colorInput.owner = colorInput.owner === "fill" ? undefined : "fill"
 					if (colorInput.owner !== "fill") return
