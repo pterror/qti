@@ -6,7 +6,9 @@ import Qti.Filesystem
 import Qti.Process
 
 ColumnLayout {
+	id: root
 	readonly property var modelData: model.display
+	property var path: "verdict" in modelData ? JSON.parse(modelData.verdict || "{}").basePath : modelData.install_folder
 
 	CustomButton {
 		Layout.alignment: Qt.AlignHCenter
@@ -46,8 +48,8 @@ ColumnLayout {
 			IconButton { icon.name: "web"; onClicked: Qt.openUrlExternally(modelData.url) }
 			IconButton {
 				icon.name: "play"
-				visible: modelData.install_folder ?? false
-				property var folder: Folder { path: modelData.install_folder ?? "" }
+				visible: root.path ?? false
+				property var folder: Folder { path: root.path ?? "" }
 				property var process: Process {}
 				onClicked: {
 					let filePaths = folder.files.map(file => file.path)
@@ -64,6 +66,7 @@ ColumnLayout {
 					}
 					const candidate = candidates[0] // assume first candidate is the right one
 					const ext = candidate.split(".").slice(-1)[0]
+					// TODO: update cave.last_played using game_id or id
 					switch (ext) {
 						case "html": { Qt.openUrlExternally(candidate); break }
 						case "exe": {
