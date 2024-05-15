@@ -1,6 +1,6 @@
 #include "sql_query_model.hpp"
-#include <qnamespace.h>
-#include <qvariant.h>
+
+#include <QSqlError>
 
 SqlQueryModel::SqlQueryModel(QObject *parent, QSqlQuery &&query)
     : QAbstractListModel(parent),
@@ -21,7 +21,13 @@ int SqlQueryModel::rowCount(const QModelIndex & /*parent*/) const {
   if (!this->mQuery->isActive()) {
     this->mQuery->exec();
   }
+  // if still inactive then the query is broken
+  if (!this->mQuery->isActive()) {
+    qWarning() << this->mQuery->lastError();
+    return 0;
+  }
   auto size = this->mQuery->size();
+  this->mQuery->seek(0);
   if (size == -1) {
     auto current = 1 << 16;
     auto low = 0;

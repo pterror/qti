@@ -11,6 +11,8 @@ option(WAYLAND "Enable Wayland support" ON)
 option(PLUGINS "Set the default value for whether plugins should be built" ON)
 option(PLUGIN_STDLIB "Include Stdlib plugin" ${PLUGINS})
 option(PLUGIN_CORE "Include Core plugin" ${PLUGINS})
+option(PLUGIN_FILESYSTEM "Include Filesystem plugin" ${PLUGINS})
+option(PLUGIN_PROCESS "Include Process plugin" ${PLUGINS})
 option(PLUGIN_SCREENSHOT "Include Screenshot plugin" ${PLUGINS})
 option(PLUGIN_CLIPBOARD "Include Clipboard plugin" ${PLUGINS})
 option(PLUGIN_APPLICATION_DATABASE "Include Application Database plugin" ${PLUGINS})
@@ -34,6 +36,14 @@ endif()
 
 if (PLUGIN_CORE)
     add_subdirectory(plugin/core)
+endif()
+
+if (PLUGIN_FILESYSTEM)
+    add_subdirectory(plugin/filesystem)
+endif()
+
+if (PLUGIN_PROCESS)
+    add_subdirectory(plugin/process)
 endif()
 
 if (PLUGIN_SCREENSHOT)

@@ -1,13 +1,16 @@
 #include "folder.hpp"
 
-// FIXME: initial emits?
-
 void Folder::setPath(QString path) {
   FilesystemEntry::setPath(path);
   this->reload();
 }
 
-QList<File *> Folder::files() const { return this->mFiles; }
+QList<File *> Folder::files() {
+  if (!this->mFiles) {
+    this->reloadFiles();
+  }
+  return *this->mFiles;
+}
 
 QList<Folder *> Folder::folders() {
   if (!this->mFolders) {
@@ -29,14 +32,10 @@ void Folder::reload() {
   }
   this->mDir.setPath(this->path());
   this->mDir.refresh();
-  this->mFiles.clear();
-  const auto fileChildrenNames = this->mDir.entryList(QDir::Files);
-  const auto basePath = this->path();
-  for (const auto &name : fileChildrenNames) {
-    auto *const child = this->mFiles.emplace_back(new File(this));
-    child->setPath(basePath + "/" + name);
+  if (this->mFiles) {
+    this->reloadFiles();
+    emit this->filesChanged();
   }
-  emit this->filesChanged();
   if (this->mFolders) {
     this->reloadFolders();
     emit this->foldersChanged();
@@ -47,14 +46,24 @@ void Folder::reload() {
     this->mWatcher.removePath(this->path());
   }
   // this->mWatcher.event(QEvent *event);
-  // FIXME: emit events
+}
+
+void Folder::reloadFiles() {
+  this->mFiles.reset();
+  this->mFiles = QList<File *>();
+  const auto fileChildrenNames = this->mDir.entryList(QDir::Files);
+  const auto basePath = this->path();
+  for (const auto &name : fileChildrenNames) {
+    auto *const child = this->mFiles->emplace_back(new File(this));
+    child->setPath(basePath + "/" + name);
+  }
 }
 
 void Folder::reloadFolders() {
-  const auto directoryChildrenNames =
-      this->mDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
   this->mFolders.reset();
   this->mFolders = QList<Folder *>();
+  const auto directoryChildrenNames =
+      this->mDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
   const auto basePath = this->path();
   for (const auto &name : directoryChildrenNames) {
     auto *const child = this->mFolders->emplace_back(new Folder(this));

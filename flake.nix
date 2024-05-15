@@ -14,6 +14,8 @@
           };
           qti-plugin-stdlib = pkgs.callPackage ./nix-modules/qti-plugin-stdlib.nix { };
           qti-plugin-core = pkgs.callPackage ./nix-modules/qti-plugin-core.nix { };
+          qti-plugin-filesystem = pkgs.callPackage ./nix-modules/qti-plugin-filesystem.nix { };
+          qti-plugin-process = pkgs.callPackage ./nix-modules/qti-plugin-process.nix { };
           qti-plugin-clipboard = pkgs.callPackage ./nix-modules/qti-plugin-clipboard.nix { };
           qti-plugin-screenshot = pkgs.callPackage ./nix-modules/qti-plugin-screenshot.nix { };
           qti-plugin-application-database = pkgs.callPackage ./nix-modules/qti-plugin-application-database.nix { };
@@ -23,6 +25,8 @@
           qti-all-plugins = [
             qti-plugin-stdlib
             qti-plugin-core
+            qti-plugin-filesystem
+            qti-plugin-process
             qti-plugin-clipboard
             qti-plugin-screenshot
             qti-plugin-application-database

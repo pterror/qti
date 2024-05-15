@@ -21,7 +21,7 @@ public:
 
   void setPath(QString path) override;
 
-  [[nodiscard]] QList<File *> files() const;
+  [[nodiscard]] QList<File *> files();
 
   [[nodiscard]] QList<Folder *> folders();
 
@@ -35,11 +35,10 @@ signals:
 
 private:
   void reload();
+  void reloadFiles();
   void reloadFolders();
 
-  QList<File *> mFiles;
-  // this SHOULD be optional, otherwise the entire subtree is immediately
-  // loaded.
+  std::optional<QList<File *>> mFiles;
   std::optional<QList<Folder *>> mFolders;
   bool mWatching = false;
   QDir mDir;
