@@ -7,8 +7,8 @@ import Qti.Process
 
 ColumnLayout {
 	id: root
-	readonly property var modelData: model.display
-	property var path: "verdict" in modelData ? JSON.parse(modelData.verdict || "{}").basePath : modelData.install_folder
+	readonly property var modelData_: modelData ?? model.display
+	property var path: "verdict" in modelData_ ? JSON.parse(modelData_.verdict || "{}").basePath : modelData_.install_folder
 
 	CustomButton {
 		Layout.alignment: Qt.AlignHCenter
@@ -18,7 +18,7 @@ ColumnLayout {
 				Layout.preferredWidth: imageWidth
 				Layout.preferredHeight: imageHeight
 				fillMode: Image.PreserveAspectFit
-				source: modelData.cover_url
+				source: modelData_.cover_url
 			}
 
 			Text {
@@ -26,7 +26,7 @@ ColumnLayout {
 				Layout.preferredWidth: imageWidth
 				elide: Text.ElideRight
 				maximumLineCount: 1
-				text: modelData.title
+				text: modelData_.title
 				font.weight: 700; font.pointSize: 10
 			}
 
@@ -35,7 +35,7 @@ ColumnLayout {
 				Layout.preferredWidth: imageWidth
 				elide: Text.ElideRight
 				maximumLineCount: 1
-				text: modelData.short_text
+				text: modelData_.short_text
 			}
 		}
 	}
@@ -45,7 +45,7 @@ ColumnLayout {
 
 		RowLayout {
 			spacing: 0
-			IconButton { icon.name: "web"; onClicked: Qt.openUrlExternally(modelData.url) }
+			IconButton { icon.name: "web"; onClicked: Qt.openUrlExternally(modelData_.url) }
 			IconButton {
 				icon.name: "play"
 				visible: root.path ?? false
@@ -61,7 +61,7 @@ ColumnLayout {
 					}
 					const candidates = filePaths.filter(p => /[.](?:exe|html)$/.test(p) && !/UnityCrashHandler64[.]exe/.test(p))
 					if (candidates.length === 0) {
-						console.error("qti.itch: no launchable file in " + modelData.install_folder)
+						console.error("qti.itch: no launchable file in " + modelData_.install_folder)
 						return
 					}
 					const candidate = candidates[0] // assume first candidate is the right one
@@ -93,9 +93,9 @@ ColumnLayout {
 
 		RowLayout {
 			spacing: 0
-			IconButton { icon.name: "logo-windows"; enabled: false; visible: modelData.windows === "all" }
-			IconButton { icon.name: "logo-apple"; enabled: false; visible: modelData.osx === "all" }
-			IconButton { icon.name: "logo-linux"; enabled: false; visible: modelData.linux === "all" }
+			IconButton { icon.name: "logo-windows"; enabled: false; visible: modelData_.windows === "all" }
+			IconButton { icon.name: "logo-apple"; enabled: false; visible: modelData_.osx === "all" }
+			IconButton { icon.name: "logo-linux"; enabled: false; visible: modelData_.linux === "all" }
 		}
 	}
 }

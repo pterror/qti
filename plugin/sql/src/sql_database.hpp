@@ -9,6 +9,7 @@
 class SqlDatabase : public QObject {
   Q_OBJECT;
   QML_NAMED_ELEMENT(SqlDatabase);
+  Q_PROPERTY(SqlDatabase *reactive READ reactive NOTIFY reactiveChanged);
   Q_PROPERTY(QString type READ type WRITE setType NOTIFY typeChanged);
   Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged);
   Q_PROPERTY(
@@ -25,6 +26,8 @@ class SqlDatabase : public QObject {
 
 public:
   explicit SqlDatabase();
+
+  [[nodiscard]] SqlDatabase *reactive();
 
   [[nodiscard]] QString type() const;
   void setType(QString type);
@@ -66,6 +69,7 @@ public:
                                QList<QVariant> columns) const;
 
 signals:
+  void reactiveChanged();
   void typeChanged();
   void nameChanged();
   void usernameChanged();

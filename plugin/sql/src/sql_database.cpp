@@ -17,7 +17,11 @@ SqlDatabase::SqlDatabase()
                    &SqlDatabase::tableNamesChanged);
   QObject::connect(this, &SqlDatabase::reloaded, this,
                    &SqlDatabase::tablesChanged);
+  QObject::connect(this, &SqlDatabase::reloaded, this,
+                   &SqlDatabase::reactiveChanged);
 }
+
+SqlDatabase *SqlDatabase::reactive() { return this; }
 
 QString SqlDatabase::type() const { return this->mType; }
 void SqlDatabase::setType(QString type) {
