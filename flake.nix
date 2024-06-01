@@ -21,6 +21,7 @@
           qti-plugin-application-database = pkgs.callPackage ./nix-modules/qti-plugin-application-database.nix { };
           qti-plugin-sql = pkgs.callPackage ./nix-modules/qti-plugin-sql.nix { };
           qti-app-screenshot-editor = pkgs.callPackage ./nix-modules/qti-app-screenshot-editor.nix { };
+          qti-app-itch = pkgs.callPackage ./nix-modules/qti-app-itch.nix { };
           default = qti;
           qti-all-plugins = [
             qti-plugin-stdlib
@@ -32,7 +33,7 @@
             qti-plugin-application-database
             qti-plugin-sql
           ];
-          qti-all-apps = [ qti-app-screenshot-editor ];
+          qti-all-apps = [ qti-app-screenshot-editor qti-app-itch ];
           qti-all = [ qti ] ++ qti-all-plugins ++ qti-all-apps;
         });
 
