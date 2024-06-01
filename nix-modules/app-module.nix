@@ -30,7 +30,6 @@
     mkdir -p $out/share/qti/${args.pname}
     mv * $out/share/qti/${args.pname}
   '';
-  extraPrefix = "/share/qti";
   meta = with lib; {
     homepage = "https://github.com/pterror/qti/tree/master/app/${args.pname}";
     description = "Qt interpreter";
