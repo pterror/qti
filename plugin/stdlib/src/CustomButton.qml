@@ -4,7 +4,8 @@ import QtQuick.Controls
 Rectangle {
 	id: root
 	default property alias content: mouseArea.children
-  signal clicked()
+  signal clicked(MouseEvent event)
+  signal doubleClicked(MouseEvent event)
 	property bool active: false
   palette.text: Theme.button.foregroundColor
   radius: Theme.button.radius
@@ -23,6 +24,7 @@ Rectangle {
 		anchors.fill: parent
 		anchors.margins: Theme.button.margin
 		cursorShape: Qt.PointingHandCursor
-		onClicked: root.clicked()
+		onClicked: event => { root.clicked(event) }
+		onDoubleClicked: event => { root.doubleClicked(event) }
 	}
 }

@@ -59,7 +59,7 @@ ColumnLayout {
 							filePaths.push(...childFolder.files.map(file => file.path))
 						}
 					}
-					const candidates = filePaths.filter(p => /[.](?:exe|html)$/.test(p) && !/UnityCrashHandler64[.]exe/.test(p))
+					const candidates = filePaths.filter(p => /[.](?:exe|html)$/.test(p) && !/UnityCrashHandler64[.]exe|credits[.]html|\breadme\b/i.test(p))
 					if (candidates.length === 0) {
 						console.error("qti.itch: no launchable file in " + modelData_.install_folder)
 						return

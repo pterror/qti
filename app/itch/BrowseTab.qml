@@ -49,7 +49,7 @@ ColumnLayout {
 					const [, game_id] = gameHtml.match(/data-game_id="(\d+)"/)?.map(Number) ?? []
 					const [, author_id] = gameHtml.match(/data-label="user:(\d+)"/)?.map(Number) ?? []
 					const [, cover_url] = gameHtml.match(/data-lazy_src="([^\"]+)"/)
-					const [, author_slug, game_slug] = gameHtml.match(/href="https:[/][/]([^\"]+).itch.io[/]([^\"]+)"/) ?? []
+					const [, url, author_slug, game_slug] = gameHtml.match(/href="(https:[/][/]([^\"]+).itch.io[/]([^\"]+))"/) ?? []
 					const [, title] = gameHtml.match(/class="title.*?">([^<]+)/)?.map(unescapeHtml) ?? []
 					const [, short_text] = gameHtml.match(/class="game_text">([^<]+)/)?.map(unescapeHtml) ?? []
 					const [, genre] = gameHtml.match(/class="game_genre">([^<]+)/)?.map(unescapeHtml) ?? []
@@ -60,7 +60,7 @@ ColumnLayout {
 					const android = /title="Download for Android"/.test(gameHtml) ? "all" : null
 					const gameInfo = {
 						id: game_id, game_id, author_id,
-						cover_url, author_slug, game_slug,
+						url, cover_url, author_slug, game_slug,
 						author, title, short_text, genre,
 						windows, linux, osx, android,
 					}
