@@ -33,6 +33,9 @@ DiskNetworkAccessManagerFactory::create(QObject *parent) {
 }
 
 int main(int argc, char **argv) {
+  // ShareOpenGLContexts is needed for using the threaded renderer
+  // on Nvidia EGLStreams
+  QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
   const auto app = QGuiApplication(argc, argv);
 
   auto cliParser = QCommandLineParser();

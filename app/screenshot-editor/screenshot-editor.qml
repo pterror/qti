@@ -452,6 +452,19 @@ QtObject {
 					radius: Theme.button.radius
 				}
 			}
+			RowLayout {
+				Text { text: "Size" }
+				TextInput {
+					Layout.alignment: Qt.AlignHCenter
+					text: window.strokeWidth
+					color: Theme.foregroundColor
+					onTextEdited: {
+						const value = Number(text)
+						if (!Number.isFinite(value)) return
+						window.strokeWidth = value
+					}
+				}
+			}
 		}
 
 		Rectangle {
