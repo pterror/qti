@@ -1,6 +1,6 @@
 [submodule "plugin/xdg-desktop-portal/dep/xdg-desktop-portal"]
 	path = plugin/xdg-desktop-portal/dep/xdg-desktop-portal
-	url = https://github.com/pterror/xdg-desktop-portal.git
+	url = https://github.com/flatpak/xdg-desktop-portal.git
 	shallow = true
 [submodule "plugin/screenshot/dep/wlroots"]
 	path = plugin/screenshot/dep/wlroots
