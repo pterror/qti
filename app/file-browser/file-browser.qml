@@ -43,23 +43,30 @@ QtiWindow {
 				model: folder.folders
 
 				CustomButton {
+					id: button
 					required property var modelData
-					Layout.fillWidth: true
-					Layout.fillHeight: true
+					implicitWidth: 64
+					implicitHeight: 64
 					onDoubleClicked: window.path = modelData.path
 
 					ColumnLayout {
-						IconButton {
-							Layout.alignment: Qt.AlignHCenter
-							enabled: false
-							icon.name: "folder"
-							icon.height: 64; icon.width: 64
-						}
-						Text {
-							Layout.alignment: Qt.AlignHCenter
-							text: window.fileName(modelData.path)
-							elide: Text.ElideRight
-							maximumLineCount: 1
+						// IconButton {
+						// 	Layout.alignment: Qt.AlignHCenter
+						// 	enabled: false
+						// 	// icon.name: "folder"
+						// 	icon.height: 64; icon.width: 64
+						// }
+						Rectangle {
+							width: button.implicitWidth
+							height: button.implicitHeight
+							color: "white"
+							Text {
+								horizontalAlignment: Qt.AlignHCenter
+								width: parent.width
+								text: window.fileName(modelData.path)
+								elide: Text.ElideRight
+								maximumLineCount: 1
+							}
 						}
 					}
 				}
@@ -69,24 +76,29 @@ QtiWindow {
 				model: folder.files
 
 				CustomButton {
+					id: button
 					required property var modelData
-					Layout.fillWidth: true
-					Layout.fillHeight: true
+					implicitWidth: 64
+					implicitHeight: 64
 					onDoubleClicked: Qt.openUrlExternally(modelData.path)
 
 					ColumnLayout {
-						IconButton {
-							Layout.alignment: Qt.AlignHCenter
-							enabled: false
-							// TODO: get handling
-							icon.name: modelData.mimeType || "text-x-generic"
-							icon.height: 64; icon.width: 64
-						}
-						Text {
-							Layout.alignment: Qt.AlignHCenter
-							text: window.fileName(modelData.path)
-							elide: Text.ElideRight
-							maximumLineCount: 1
+						// IconButton {
+						// 	Layout.alignment: Qt.AlignHCenter
+						// 	enabled: false
+						// 	// TODO: get handling
+						// 	// icon.name: modelData.mimeType || "text-x-generic"
+						// 	icon.height: 64; icon.width: 64
+						// }
+						Rectangle {
+							width: button.implicitWidth
+							Text {
+								horizontalAlignment: Qt.AlignHCenter
+								width: parent.width
+								text: window.fileName(modelData.path)
+								elide: Text.ElideRight
+								maximumLineCount: 1
+							}
 						}
 					}
 				}
