@@ -101,7 +101,8 @@ QtObject {
 					}
 					case "pen":
 					case "ellipse":
-					case "rectangle": {
+					case "rectangle":
+					case "arrow": {
 						const props = Object.assign(
 							{ startX: scaledX, startY: scaledY, color: window.fillColor },
 							window.currentTool === "pen" ? {} : { x: scaledX, y: scaledY, width: 1, height: 1 }
@@ -110,6 +111,7 @@ QtObject {
 							pen: penComponent,
 							ellipse: ellipseComponent,
 							rectangle: rectangleComponent,
+							arrow: arrowComponent,
 						}[window.currentTool]
 						window.currentDecoration = component.createObject(decorationsContainer, props)
 						window.currentDecoration.border.color = window.strokeColor
@@ -145,7 +147,8 @@ QtObject {
 						break
 					}
 					case "ellipse":
-					case "rectangle": {
+					case "rectangle":
+					case "arrow": {
 						if (!window.currentDecoration) return
 						window.currentDecoration.x = Math.min(scaledX, window.currentDecoration.startX)
 						window.currentDecoration.y = Math.min(scaledY, window.currentDecoration.startY)
@@ -301,7 +304,57 @@ QtObject {
 				id: rectangleComponent
 
 				Rectangle {
-					property int startX: 0; property int startY: 0
+					property int startX: 0
+					property int startY: 0
+
+					MouseArea {
+						enabled: window.currentTool === "eraser" && mouseArea.containsPress
+						hoverEnabled: true
+						anchors.fill: parent
+						onPositionChanged: {
+							decorationsContainer.children = decorationsContainer.children.filter(c => c !== parent)
+						}
+					}
+				}
+			}
+
+			Component {
+				id: arrowComponent
+
+				Shape {
+					property int startX: 0
+					property int startY: 0
+					property var color: ""
+					property QtObject border: QtObject { property int width: 4; property var color: "" }
+					property int localStartX: x == startX ? 0 : width
+					property int localStartY: y == startY ? 0 : height
+					property int localEndX: x == startX ? width : 0
+					property int localEndY: y == startY ? height : 0
+					property int dx: localEndX - localStartX
+					property int dy: localEndY - localStartY
+					property int length: Math.hypot(dx, dy)
+					property int arrowHeadSize: Math.min(20, length / 4)
+					property real direction: Math.atan2(dy, dx) + Math.PI
+					property real arrowHeadAngle1: direction + Math.PI / 5
+					property real arrowHeadAngle2: direction - Math.PI / 5
+
+					ShapePath {
+						strokeWidth: border.width
+						strokeColor: border.color
+						fillColor: "transparent"
+
+						PathMove { x: localStartX; y: localStartY }
+						PathLine { x: localEndX; y: localEndY }
+						PathLine {
+							x: localEndX + Math.cos(arrowHeadAngle1) * arrowHeadSize
+							y: localEndY + Math.sin(arrowHeadAngle1) * arrowHeadSize
+						}
+						PathMove { x: localEndX; y: localEndY }
+						PathLine {
+							x: localEndX + Math.cos(arrowHeadAngle2) * arrowHeadSize
+							y: localEndY + Math.sin(arrowHeadAngle2) * arrowHeadSize
+						}
+					}
 
 					MouseArea {
 						enabled: window.currentTool === "eraser" && mouseArea.containsPress
@@ -387,6 +440,7 @@ QtObject {
 			IconButton { icon.name: "pen"; active: window.currentTool == "pen"; onClicked: window.switchTool("pen") }
 			IconButton { icon.name: "ellipse"; active: window.currentTool == "ellipse"; onClicked: window.switchTool("ellipse") }
 			IconButton { icon.name: "rectangle"; active: window.currentTool == "rectangle"; onClicked: window.switchTool("rectangle") }
+			IconButton { icon.name: "arrow"; active: window.currentTool == "arrow"; onClicked: window.switchTool("arrow") }
 			CustomButton {
 				id: textButton; implicitWidth: 32; implicitHeight: 32; active: window.currentTool == "text"
 				Text {
