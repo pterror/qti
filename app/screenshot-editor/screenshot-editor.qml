@@ -54,10 +54,6 @@ QtObject {
 		}
 
 		function commitSettingsEdits() {
-			if (colorInput.owner) {
-				colorInput.owner = undefined
-				colorInput.callback(colorInput.color_)
-			}
 			if (fontInput.visible) {
 				fontInput.visible = false
 				window.fontFamily = fontInput.fontFamily
@@ -66,7 +62,6 @@ QtObject {
 
 		function switchTool(tool, ignoreFontInput = false) {
 			window.currentTool = tool
-			colorInput.owner = undefined
 			if (!ignoreFontInput) fontInput.visible = false
 		}
 
@@ -89,7 +84,6 @@ QtObject {
 				}
 			}
 			onPressed: event => {
-				colorInput.owner = undefined
 				fontInput.visible = false
 				window.redoStack = []
 				const scaledX = (event.x - (window.width - image.sourceSize.width * image.scale) / 2) / image.scale
@@ -166,15 +160,14 @@ QtObject {
 		Item {
 			id: root
 			property bool grabbing: false
-			focus: colorInput.owner === undefined && !fontInput.visible
+			focus: !fontInput.visible
 			width: !window ? 0 : grabbing ? window.cropWidth : parent.width
 			height: !window ? 0 : grabbing ? window.cropHeight : parent.height
 
 			Shortcut {
 				sequence: "Escape"
 				onActivated: {
-					if (colorInput.owner !== undefined || fontInput.visible) {
-						colorInput.owner = undefined
+					if (fontInput.visible) {
 						fontInput.visible = false
 					} else {
 						Qt.quit()
@@ -415,14 +408,7 @@ QtObject {
 			}
 			CustomButton {
 				implicitWidth: 32; implicitHeight: 32
-				onClicked: {
-					colorInput.owner = colorInput.owner === "stroke" ? undefined : "stroke"
-					if (colorInput.owner !== "stroke") return
-					colorInput.x = Qt.binding(() => !root ? 0 : mapToItem(root, width / 2, 0).x - colorInput.width / 2)
-					colorInput.y = mapToItem(root, 0, height).y
-					colorInput.color_ = window.strokeColor
-					colorInput.callback = color => { window.strokeColor = color }
-				}
+				onClicked: strokeDialog.open()
 
 				Rectangle {
 					anchors.fill: parent
@@ -432,17 +418,14 @@ QtObject {
 					radius: Theme.button.radius
 				}
 			}
+			ColorDialog {
+				id: strokeDialog
+				selectedColor: window.strokeColor
+				onAccepted: window.strokeColor = selectedColor
+			}
 			CustomButton {
 				implicitWidth: 32; implicitHeight: 32
-				onClicked: {
-					colorInput.owner = colorInput.owner === "fill" ? undefined : "fill"
-					if (colorInput.owner !== "fill") return
-					const coord = mapToItem(root, width / 2, height)
-					colorInput.x = Qt.binding(() => coord.x - colorInput.width / 2)
-					colorInput.y = coord.y
-					colorInput.color_ = window.fillColor
-					colorInput.callback = color => { window.fillColor = color }
-				}
+				onClicked: fillDialog.open()
 
 				Rectangle {
 					anchors.fill: parent
@@ -451,6 +434,11 @@ QtObject {
 					border.width: 1
 					radius: Theme.button.radius
 				}
+			}
+			ColorDialog {
+				id: fillDialog
+				selectedColor: window.fillColor
+				onAccepted: window.fillColor = selectedColor
 			}
 			RowLayout {
 				Text { text: "Size" }
@@ -503,52 +491,6 @@ QtObject {
 						text: "AaBbCc"
 						font.family: fontInput.fontFamily
 						font.pointSize: window.fontSize
-					}
-				}
-			}
-		}
-
-		Rectangle {
-			id: colorInput
-			property string color_
-			property var owner
-			property var callback
-			color: "transparent"
-			visible: owner !== undefined
-			width: colorInputLayout.implicitWidth + Theme.panel.margin * 2
-			height: colorInputLayout.implicitHeight + Theme.panel.margin * 2
-			onVisibleChanged: if (visible) colorTextInput.focus = true
-
-			MouseArea { anchors.fill: parent }
-
-			Rectangle {
-				anchors.fill: parent
-				anchors.margins: Theme.panel.margin
-				radius: Theme.panel.radius
-				color: Theme.panel.backgroundColor
-				ColumnLayout {
-					id: colorInputLayout
-
-					TextInput {
-						id: colorTextInput
-						Layout.alignment: Qt.AlignHCenter
-						text: colorInput.color_
-						color: Theme.foregroundColor
-						onTextEdited: colorInput.color_ = text
-						onAccepted: {
-							colorInput.callback(colorInput.color_)
-							colorInput.owner = undefined
-						}
-					}
-
-					Rectangle {
-						Layout.alignment: Qt.AlignHCenter
-						width: 24
-						height: 24
-						color: colorInput.color_
-						border.color: "white"
-						border.width: 1
-						radius: Theme.button.radius
 					}
 				}
 			}
