@@ -1,5 +1,11 @@
 # https://doc.qt.io/qt-6/cmake-build-reusable-qml-module.html
 find_package(Qt6 REQUIRED COMPONENTS Gui Quick WaylandClient)
+# In Qt 6.10, private dependencies are required to be explicit,
+# but they could not be explicitly depended on prior to 6.9.
+if (Qt6_VERSION VERSION_GREATER_EQUAL "6.9.0")
+	set(QT_NO_PRIVATE_MODULE_WARNING ON)
+	find_package(Qt6 REQUIRED COMPONENTS QuickPrivate WaylandClientPrivate)
+endif()
 qt_add_qml_module(qti_screenshot URI Qti.Screenshot VERSION 0.1 SHARED
     SOURCES
     screenshot.cpp screenshot.hpp
