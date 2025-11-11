@@ -1,7 +1,7 @@
 { lib
 , pkgs
 , keepDebugInfo
-, buildStdenv ? pkgs.clang17Stdenv
+, stdenv
 , cmake
 , ninja
 , qt6
@@ -26,7 +26,7 @@
   )
 , debug ? false
 , enableWayland ? true
-}: args: buildStdenv.mkDerivation (args // rec {
+}: args: stdenv.mkDerivation (args // rec {
   pname = "qti-plugin-${args.pname}${lib.optionalString debug "-debug"}";
   version = args.version or "0.0.1";
   nativeBuildInputs = with pkgs; [

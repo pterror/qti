@@ -1,7 +1,7 @@
 { lib
 , pkgs
+, stdenv
 , keepDebugInfo
-, buildStdenv ? pkgs.clang17Stdenv
 , cmake
 , ninja
 , qt6
@@ -27,7 +27,7 @@
 , debug ? false
 , enableWayland ? true
 , svgSupport ? true # you almost always want this
-}: buildStdenv.mkDerivation rec {
+}: stdenv.mkDerivation rec {
   pname = "qti${lib.optionalString debug "-debug"}";
   version = "0.0.1";
   src = ./.;
